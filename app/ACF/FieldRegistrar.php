@@ -27,19 +27,19 @@ class FieldRegistrar
             'title' => 'Page Modules',
         ]);
 
-        $pageModules
-            ->addFlexibleContent('flexible_modules', [
-                'label' => 'Flexible modules',
-                'button_label' => 'Add module',
-            ]);
+        $flexibleModules = $pageModules->addFlexibleContent('flexible_modules', [
+            'label' => 'Flexible modules',
+            'button_label' => 'Add module',
+        ]);
 
         foreach ($modules as $module) {
-            $pageModules->addLayout($module);
+            $flexibleModules->addLayout($module);
         }
 
-        $pageModules
-            ->endFlexibleContent()
-            ->setLocation('post_type', '==', 'page');
+        $flexibleModules
+            ->endFlexibleContent();
+
+        $pageModules->setLocation('post_type', '==', 'page');
 
         acf_add_local_field_group($pageModules->build());
     }
