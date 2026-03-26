@@ -9,8 +9,8 @@
 @endphp
 
 @if (! empty($backgroundImage['ID']) && $heading)
-  <section class="hero-module relative z-0 isolate w-[100dvw] overflow-hidden bg-black [margin-left:calc(50%-50dvw)]" data-hero>
-    <div class="relative w-full" data-hero-media>
+  <section class="hero-module relative z-0 isolate min-h-[70svh] w-[100dvw] overflow-hidden bg-black [margin-left:calc(50%-50dvw)] md:min-h-0" data-hero>
+    <div class="relative h-[100svh] w-full md:h-auto" data-hero-media>
       <div class="relative w-full" data-hero-bg>
         <picture>
           @if (! empty($mobileImage['ID']))
@@ -19,7 +19,7 @@
           <img
             src="{{ wp_get_attachment_image_url($backgroundImage['ID'], 'full') }}"
             alt="{{ esc_attr($backgroundImage['alt'] ?? $heading) }}"
-            class="block h-auto w-full object-contain object-top will-change-transform"
+            class="block h-full w-full object-cover object-top will-change-transform md:h-auto md:object-contain"
             data-hero-image
           >
         </picture>
@@ -27,15 +27,15 @@
 
       <div class="pointer-events-none absolute inset-0 bg-gradient-to-b from-black/10 via-transparent to-black/35"></div>
 
-      <div class="absolute inset-0 z-30 flex items-center justify-start px-6 pb-0 pt-0 md:justify-center md:px-10 md:py-16">
-        <div class="mx-0 flex w-full max-w-none flex-col items-start space-y-5 text-left text-white md:mx-auto md:max-w-6xl md:items-center md:text-center" data-hero-title-track>
+      <div class="absolute left-0 right-0 top-0 z-30 flex min-h-screen items-start justify-start px-6 pb-0 pt-0 md:items-center md:justify-center md:px-10 md:py-0">
+        <div class="mx-0 mt-[45svh] flex w-full max-w-none flex-col items-start space-y-5 text-left text-white md:mx-auto md:mt-0 md:max-w-6xl md:items-center md:text-center" data-hero-title-track>
           @if ($eyebrow)
             <p class="text-xs font-semibold uppercase tracking-[0.2em] text-white/75 md:text-sm" data-hero-reveal>
               {{ $eyebrow }}
             </p>
           @endif
 
-          <h1 class="text-[clamp(2.25rem,13.5vw,4.3rem)] font-semibold uppercase leading-[0.95] tracking-tight text-white md:text-[clamp(2.6rem,8vw,8rem)]" data-hero-reveal>
+          <h1 class="text-[clamp(2.6rem,15vw,5rem)] font-semibold uppercase leading-[0.95] tracking-tight text-white md:text-[clamp(2.6rem,8vw,8rem)]" data-hero-reveal>
             {{ $heading }}
           </h1>
 

@@ -49,7 +49,7 @@ export const initHeroModule = () => {
         trigger: hero,
         start: 'top top',
         // Finish hero image travel before the next section starts covering it
-        end: () => (isMobile ? '+=100%' : '+=120%'),
+        end: () => (isMobile ? '+=50%' : '+=120%'),
         scrub: true,
         invalidateOnRefresh: true,
       },
@@ -60,7 +60,7 @@ export const initHeroModule = () => {
         media,
         { clipPath: 'inset(0% 0% 0% 0% round 0px)' },
         {
-          clipPath: () => (isMobile ? 'inset(0% 8vw 0% 8vw round 14px)' : 'inset(0% 6vw 0% 6vw round 14px)'),
+          clipPath: () => (isMobile ? 'inset(0% 0% 0% 0% round 0px)' : 'inset(0% 6vw 0% 6vw round 14px)'),
           ease: 'none',
           duration: 1,
         },

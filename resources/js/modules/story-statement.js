@@ -4,6 +4,7 @@ export const initStoryStatementModule = () => {
   const sections = document.querySelectorAll('[data-story-statement]');
 
   sections.forEach((section) => {
+    const isMobile = window.matchMedia('(max-width: 767px)').matches;
     const lineOne = section.querySelector('[data-story-line="1"]');
     const lineTwo = section.querySelector('[data-story-line="2"]');
     const description = section.querySelector('[data-story-description]');
@@ -26,10 +27,30 @@ export const initStoryStatementModule = () => {
 
     gsap.set(items, { autoAlpha: 0, y: 120 });
 
+    if (isMobile) {
+      const mobileTimeline = gsap.timeline({
+        scrollTrigger: {
+          trigger: section,
+          start: 'top 68%',
+          once: true,
+          invalidateOnRefresh: true,
+        },
+      })
+        .to(lineOne, { autoAlpha: 1, y: 0, duration: 0.75, ease: 'power3.out' }, 0)
+        .to(lineTwo, { autoAlpha: 1, y: 0, duration: 0.75, ease: 'power3.out' }, 0.16)
+        .to(description, { autoAlpha: 1, y: 0, duration: 0.75, ease: 'power3.out' }, 0.32);
+
+      if (gif) {
+        mobileTimeline.to(gif, { autoAlpha: 1, y: 0, duration: 0.75, ease: 'power3.out' }, 0.5);
+      }
+
+      return;
+    }
+
     const timeline = gsap.timeline({
       scrollTrigger: {
         trigger: section,
-        start: 'top 62%',
+        start: 'top 52%',
         end: '+=140%',
         scrub: true,
         invalidateOnRefresh: true,
