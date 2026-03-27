@@ -20,8 +20,8 @@ export const initWeddingPhotoModule = () => {
       return;
     }
 
-    gsap.set(gallery, { autoAlpha: 0, y: isMobile() ? 120 : 180 });
-    gsap.set(items, { autoAlpha: 0, y: 40 });
+    gsap.set(gallery, { autoAlpha: 1, y: isMobile() ? 120 : 180 });
+    gsap.set(items, { autoAlpha: 0.1, y: 40 });
 
     const timeline = gsap.timeline({
       scrollTrigger: {
@@ -35,7 +35,7 @@ export const initWeddingPhotoModule = () => {
 
     const titleSettleAt = 0.56;
     const galleryRevealAt = 0.66;
-    const itemsRevealAt = 0.76;
+    const itemsRevealAt = 0.5;
 
     timeline.fromTo(
       title,
@@ -56,8 +56,8 @@ export const initWeddingPhotoModule = () => {
 
     timeline.fromTo(
       gallery,
-      { autoAlpha: 0, y: () => (isMobile() ? 120 : 180) },
-      { autoAlpha: 1, y: 0, ease: 'power2.out', duration: 0.44 },
+      { y: () => (isMobile() ? 120 : 180) },
+      { y: 0, ease: 'power2.out', duration: 0.44 },
       galleryRevealAt,
     );
 
@@ -68,7 +68,7 @@ export const initWeddingPhotoModule = () => {
         y: 0,
         ease: 'none',
         stagger: isMobile() ? 0.05 : 0.08,
-        duration: 0.38,
+        duration: 0.1,
       },
       itemsRevealAt,
     );
