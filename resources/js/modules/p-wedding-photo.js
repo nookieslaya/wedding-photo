@@ -20,8 +20,33 @@ export const initWeddingPhotoModule = () => {
       return;
     }
 
+    if (isMobile()) {
+      gsap.set([titleWrap, gallery], { clearProps: 'all' });
+      gsap.set(items, { autoAlpha: 0, y: 48 });
+      gsap.to(items, {
+        autoAlpha: 1,
+        y: 0,
+        ease: 'power2.out',
+        duration: 0.5,
+        stagger: 0.08,
+      });
+
+      items.forEach((item) => {
+        const image = item.querySelector('img');
+        if (!image) {
+          return;
+        }
+
+        item.addEventListener('click', () => {
+          image.classList.toggle('grayscale-0');
+        });
+      });
+
+      return;
+    }
+
     gsap.set(gallery, { autoAlpha: 1, y: isMobile() ? 120 : 180 });
-    gsap.set(items, { autoAlpha: 0.1, y: 40 });
+    gsap.set(items, { autoAlpha: 0, y: 40 });
 
     const timeline = gsap.timeline({
       scrollTrigger: {
@@ -47,7 +72,7 @@ export const initWeddingPhotoModule = () => {
       {
         scale: isMobile() ? 0.72 : 0.42,
         y: isMobile() ? 170 : 260,
-        opacity: isMobile() ? 0.2 : 0.14,
+        opacity: isMobile() ? 0 : 1,
         ease: 'none',
         duration: titleSettleAt,
       },

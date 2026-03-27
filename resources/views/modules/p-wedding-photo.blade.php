@@ -17,7 +17,7 @@
                 </h2>
             </div>
 
-            <div class="relative z-20 mx-auto w-full max-w-6xl px-6 pt-[42vh] opacity-100 md:px-10 md:pt-[38vh]" data-wedding-gallery>
+            <div class="relative z-20 mx-auto w-full max-w-6xl px-6 pt-[24vh] md:px-10 md:pt-[38vh]" data-wedding-gallery>
                 @if ($description)
                     <p class="mb-8 max-w-3xl text-sm leading-relaxed text-white/75 md:mb-12 md:text-lg">
                         {!! nl2br(e($description)) !!}
