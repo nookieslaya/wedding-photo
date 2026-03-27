@@ -9,7 +9,7 @@
         <div class="sticky top-0 z-10 flex min-h-screen items-center overflow-hidden">
             <div class="pointer-events-none absolute inset-0 bg-gradient-to-b from-black via-black/90 to-black"></div>
 
-            <div class="absolute inset-0 z-10 flex top-1/4 justify-center px-6 text-center md:px-10"
+            <div class="absolute inset-0 z-10 flex items-start justify-center px-6 pt-8 text-center md:px-10 md:pt-12"
                 data-wedding-title-wrap>
                 <h2 class="max-w-6xl text-[clamp(2.4rem,13vw,12rem)] font-semibold uppercase leading-[0.9] tracking-tight text-white"
                     data-wedding-title>
@@ -17,14 +17,14 @@
                 </h2>
             </div>
 
-            <div class="relative z-20 mx-auto w-full max-w-6xl px-6 opacity-0 md:px-10" data-wedding-gallery>
+            <div class="relative z-20 mx-auto w-full max-w-6xl px-6 pt-[42vh] opacity-0 md:px-10 md:pt-[38vh]" data-wedding-gallery>
                 @if ($description)
                     <p class="mb-8 max-w-3xl text-sm leading-relaxed text-white/75 md:mb-12 md:text-lg">
                         {!! nl2br(e($description)) !!}
                     </p>
                 @endif
 
-                <div class="grid grid-cols-1 gap-5 md:grid-cols-12 md:gap-6">
+                <div class="grid grid-cols-1 gap-5  md:grid-cols-12 md:gap-6 ">
                     @foreach ($photos as $index => $photo)
                         @php
                             $image = $photo['image'] ?? null;
