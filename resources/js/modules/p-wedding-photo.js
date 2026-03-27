@@ -47,14 +47,14 @@ export const initWeddingPhotoModule = () => {
         ease: 'none',
         duration: 1,
       },
-      0
+      0,
     );
 
     timeline.fromTo(
       gallery,
       { autoAlpha: 0, y: 70 },
       { autoAlpha: 1, y: 0, ease: 'none', duration: 0.44 },
-      0.34
+      0.34,
     );
 
     timeline.to(
@@ -66,7 +66,7 @@ export const initWeddingPhotoModule = () => {
         stagger: isMobile() ? 0.05 : 0.08,
         duration: 0.38,
       },
-      0.44
+      0.44,
     );
   });
 

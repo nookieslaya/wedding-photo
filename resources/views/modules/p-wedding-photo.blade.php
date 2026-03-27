@@ -9,8 +9,10 @@
         <div class="sticky top-0 z-10 flex min-h-screen items-center overflow-hidden">
             <div class="pointer-events-none absolute inset-0 bg-gradient-to-b from-black via-black/90 to-black"></div>
 
-            <div class="absolute inset-0 z-10 flex items-center justify-center px-6 text-center md:px-10" data-wedding-title-wrap>
-                <h2 class="max-w-6xl text-[clamp(2.4rem,13vw,12rem)] font-semibold uppercase leading-[0.9] tracking-tight text-white" data-wedding-title>
+            <div class="absolute inset-0 z-10 flex top-1/4 justify-center px-6 text-center md:px-10"
+                data-wedding-title-wrap>
+                <h2 class="max-w-6xl text-[clamp(2.4rem,13vw,12rem)] font-semibold uppercase leading-[0.9] tracking-tight text-white"
+                    data-wedding-title>
                     {{ $heading }}
                 </h2>
             </div>
@@ -41,7 +43,8 @@
                             <figure class="group {{ $desktopCols }}" data-wedding-item>
                                 <div class="overflow-hidden rounded-sm bg-neutral-900">
                                     {!! wp_get_attachment_image($image['ID'], 'large', false, [
-                                        'class' => 'h-[42svh] w-full object-cover grayscale transition duration-500 ease-out group-hover:grayscale-0 md:h-[48svh]',
+                                        'class' =>
+                                            'h-[42svh] w-full object-cover grayscale transition duration-500 ease-out group-hover:grayscale-0 md:h-[48svh]',
                                     ]) !!}
                                 </div>
 

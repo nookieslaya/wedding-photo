@@ -9,7 +9,21 @@ if (! process.env.APP_URL) {
 }
 
 export default defineConfig({
-  base: '/app/themes/sage/public/build/',
+  base: '/app/themes/animated-theme/public/build/',
+  server: {
+    host: '0.0.0.0',
+    port: 5173,
+    strictPort: true,
+    cors: {
+      origin: [/^https?:\/\/animated\.local(?::\d+)?$/],
+    },
+    allowedHosts: ['animated.local'],
+    hmr: {
+      host: 'animated.local',
+      port: 5173,
+      protocol: 'ws',
+    },
+  },
   plugins: [
     tailwindcss(),
     laravel({
