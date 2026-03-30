@@ -6,7 +6,7 @@
 
 @if ($heading && !empty($photos))
     <section class="p-wedding-photo relative bg-black text-white" data-wedding-photo>
-        <div class="sticky top-0 z-10 flex min-h-screen items-center overflow-hidden md:overflow-visible">
+        <div class="sticky top-0 z-10 flex min-h-screen items-center overflow-hidden md:overflow-visible" data-wedding-sticky>
             <div class="pointer-events-none absolute inset-0 bg-gradient-to-b from-black via-black/90 to-black"></div>
 
             <div class="absolute inset-0 z-10 flex items-start justify-center px-6 pt-8 text-center md:px-10 md:pt-12"
@@ -18,7 +18,7 @@
                         {{ $heading }}
                     </h2>
 
-                    <div class="relative z-10 mt-5 flex flex-col items-center md:mt-7" data-wedding-aperture>
+                    <div class="relative z-10 mt-5 hidden flex-col items-center md:mt-7 md:flex" data-wedding-aperture>
                         <div class="relative h-[clamp(6.75rem,12vw,11.5rem)] w-[clamp(6.75rem,12vw,11.5rem)] overflow-hidden rounded-full border border-white/30 bg-white shadow-[0_0_0_1px_rgba(255,255,255,0.35)_inset]"
                             data-wedding-aperture-disc>
                             <span
@@ -82,11 +82,18 @@
 
                         @if (!empty($image['ID']))
                             <figure class="group w-full md:w-auto {{ $desktopWidth }}" data-wedding-item>
-                                <div class="overflow-hidden rounded-sm">
+                                <div class="relative overflow-hidden rounded-sm" data-wedding-image-shell>
                                     {!! wp_get_attachment_image($image['ID'], 'large', false, [
                                         'class' =>
-                                            'h-auto w-full object-contain grayscale transition duration-500 ease-out group-hover:grayscale-0 ' .
+                                            'h-auto w-full object-contain grayscale ' .
                                             $imageMaxHeight,
+                                    ]) !!}
+
+                                    {!! wp_get_attachment_image($image['ID'], 'large', false, [
+                                        'class' =>
+                                            'pointer-events-none absolute inset-0 h-full w-full object-contain ' .
+                                            $imageMaxHeight,
+                                        'data-wedding-image-color' => '1',
                                     ]) !!}
                                 </div>
 

@@ -6,8 +6,8 @@
 @endphp
 
 @if ($lineOne && $lineTwo)
-  <section class="story-statement-module relative z-20 min-h-[170svh] bg-black text-white md:-mt-[8vh]" data-story-statement>
-    <div class="sticky top-0 mx-auto flex min-h-screen w-full max-w-6xl flex-col items-center justify-center px-6 py-20 text-center md:px-10 md:py-32">
+  <section class="story-statement-module relative z-20 min-h-screen bg-black text-white md:min-h-[170svh] md:-mt-[8vh]" data-story-statement>
+    <div class="relative mx-auto flex min-h-screen w-full max-w-6xl flex-col items-center justify-center px-6 py-20 text-center md:sticky md:top-0 md:px-10 md:py-32">
       <h2 class="text-[clamp(2.2rem,9vw,8rem)] font-semibold uppercase leading-[0.92] tracking-tight" data-story-line="1">
         {{ $lineOne }}
       </h2>

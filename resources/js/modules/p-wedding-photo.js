@@ -6,6 +6,7 @@ export const initWeddingPhotoModule = () => {
   sections.forEach((section) => {
     const titleWrap = section.querySelector('[data-wedding-title-wrap]');
     const titleShell = section.querySelector('[data-wedding-title-shell]');
+    const stickyContainer = section.querySelector('[data-wedding-sticky]');
     const title = section.querySelector('[data-wedding-title]');
     const aperture = section.querySelector('[data-wedding-aperture]');
     const apertureDisc = section.querySelector('[data-wedding-aperture-disc]');
@@ -15,6 +16,7 @@ export const initWeddingPhotoModule = () => {
     const apertureBlades = section.querySelectorAll('[data-wedding-aperture-blade]');
     const gallery = section.querySelector('[data-wedding-gallery]');
     const items = section.querySelectorAll('[data-wedding-item]');
+    const imageShells = section.querySelectorAll('[data-wedding-image-shell]');
 
     if (!titleWrap || !titleShell || !title || !gallery) {
       return;
@@ -26,6 +28,14 @@ export const initWeddingPhotoModule = () => {
       gsap.set(section, { clearProps: 'minHeight' });
       gsap.set([titleWrap, titleShell, title, aperture, apertureDisc, apertureHole, apertureCore, gallery, ...items], { clearProps: 'all' });
       gsap.set(apertureBlades, { clearProps: 'all' });
+      if (isMobile() && stickyContainer) {
+        gsap.set(stickyContainer, {
+          position: 'relative',
+          top: 'auto',
+          minHeight: 'auto',
+          overflow: 'visible',
+        });
+      }
       return;
     }
 
@@ -33,23 +43,44 @@ export const initWeddingPhotoModule = () => {
       gsap.set(section, { clearProps: 'minHeight' });
       gsap.set([titleWrap, titleShell, title, aperture, apertureDisc, apertureHole, apertureCore, gallery], { clearProps: 'all' });
       gsap.set(apertureBlades, { clearProps: 'all' });
-      gsap.set(items, { autoAlpha: 0, y: 48 });
-      gsap.to(items, {
-        autoAlpha: 1,
-        y: 0,
-        ease: 'power2.out',
-        duration: 0.5,
-        stagger: 0.08,
-      });
+      if (stickyContainer) {
+        gsap.set(stickyContainer, {
+          position: 'relative',
+          top: 'auto',
+          minHeight: 'auto',
+          overflow: 'visible',
+        });
+      }
+      gsap.set(items, { autoAlpha: 1, y: 0 });
 
-      items.forEach((item) => {
-        const image = item.querySelector('img');
-        if (!image) {
+      imageShells.forEach((shell) => {
+        const colorLayer = shell.querySelector('[data-wedding-image-color]');
+        if (!colorLayer) {
           return;
         }
 
-        item.addEventListener('click', () => {
-          image.classList.toggle('grayscale-0');
+        const state = { radius: 0 };
+        const applyReveal = (x, y) => {
+          colorLayer.style.clipPath = `circle(${state.radius}px at ${x}px ${y}px)`;
+        };
+        const centerX = shell.clientWidth * 0.5;
+        const centerY = shell.clientHeight * 0.5;
+        applyReveal(centerX, centerY);
+
+        shell.addEventListener('click', () => {
+          const rect = shell.getBoundingClientRect();
+          const x = rect.width * 0.5;
+          const y = rect.height * 0.5;
+          const maxRadius = Math.hypot(rect.width * 0.5, rect.height * 0.5);
+          const isOpen = shell.classList.toggle('is-revealed');
+
+          gsap.to(state, {
+            radius: isOpen ? maxRadius : 0,
+            duration: isOpen ? 0.55 : 0.42,
+            ease: isOpen ? 'power2.out' : 'power2.in',
+            overwrite: true,
+            onUpdate: () => applyReveal(x, y),
+          });
         });
       });
 
@@ -63,6 +94,63 @@ export const initWeddingPhotoModule = () => {
 
     gsap.set(gallery, { autoAlpha: 1, y: 180 });
     gsap.set(items, { autoAlpha: 0, y: 40 });
+
+    imageShells.forEach((shell) => {
+      const colorLayer = shell.querySelector('[data-wedding-image-color]');
+      if (!colorLayer) {
+        return;
+      }
+
+      const state = { radius: 0, x: shell.clientWidth * 0.5, y: shell.clientHeight * 0.5 };
+      const applyReveal = () => {
+        colorLayer.style.clipPath = `circle(${state.radius}px at ${state.x}px ${state.y}px)`;
+      };
+      gsap.set(colorLayer, { autoAlpha: 1 });
+      applyReveal();
+
+      const updatePointer = (event) => {
+        const rect = shell.getBoundingClientRect();
+        state.x = event.clientX - rect.left;
+        state.y = event.clientY - rect.top;
+      };
+
+      const getMaxRadius = () => {
+        const rect = shell.getBoundingClientRect();
+        return Math.hypot(Math.max(state.x, rect.width - state.x), Math.max(state.y, rect.height - state.y));
+      };
+
+      shell.addEventListener('mouseenter', (event) => {
+        updatePointer(event);
+        applyReveal();
+        gsap.to(colorLayer, {
+          autoAlpha: 1,
+          duration: 0.16,
+          ease: 'none',
+          overwrite: true,
+        });
+        gsap.to(state, {
+          radius: getMaxRadius(),
+          duration: 2,
+          ease: 'power2.out',
+          overwrite: true,
+          onUpdate: applyReveal,
+        });
+      });
+
+      shell.addEventListener('mousemove', (event) => {
+        updatePointer(event);
+        applyReveal();
+      });
+
+      shell.addEventListener('mouseleave', () => {
+        gsap.to(colorLayer, {
+          autoAlpha: 0,
+          duration: 2,
+          ease: 'power2.out',
+          overwrite: true,
+        });
+      });
+    });
 
     const apertureStops = [
       { label: 'f/1.4', value: 1.4, position: 0, spread: 1, hole: 2.35 },
