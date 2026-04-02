@@ -2,6 +2,7 @@ import { initLenis } from './shared/lenis';
 import { initHeroModule } from './modules/hero';
 import { initWeddingPhotoModule } from './modules/p-wedding-photo';
 import { initStoryStatementModule } from './modules/story-statement';
+import { initEventsListModule } from './modules/events-list';
 
 const safeInit = (name, fn) => {
   try {
@@ -16,6 +17,7 @@ const boot = () => {
   safeInit('hero', initHeroModule);
   safeInit('wedding-photo', initWeddingPhotoModule);
   safeInit('story-statement', initStoryStatementModule);
+  safeInit('events-list', initEventsListModule);
   window.__animatedThemeBooted = true;
 };
 

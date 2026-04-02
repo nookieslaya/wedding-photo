@@ -161,3 +161,53 @@ add_action('widgets_init', function () {
         'id' => 'sidebar-footer',
     ] + $config);
 });
+
+/**
+ * Register Events custom post type.
+ *
+ * @return void
+ */
+add_action('init', function () {
+    register_post_type('event', [
+        'labels' => [
+            'name' => __('Wydarzenia', 'sage'),
+            'singular_name' => __('Wydarzenie', 'sage'),
+            'add_new' => __('Dodaj nowe', 'sage'),
+            'add_new_item' => __('Dodaj wydarzenie', 'sage'),
+            'edit_item' => __('Edytuj wydarzenie', 'sage'),
+            'new_item' => __('Nowe wydarzenie', 'sage'),
+            'view_item' => __('Zobacz wydarzenie', 'sage'),
+            'search_items' => __('Szukaj wydarzeń', 'sage'),
+            'not_found' => __('Nie znaleziono wydarzeń', 'sage'),
+            'not_found_in_trash' => __('Brak wydarzeń w koszu', 'sage'),
+            'all_items' => __('Wszystkie wydarzenia', 'sage'),
+            'archives' => __('Archiwum wydarzeń', 'sage'),
+        ],
+        'public' => true,
+        'show_in_rest' => true,
+        'has_archive' => 'wydarzenia',
+        'rewrite' => [
+            'slug' => 'wydarzenia',
+            'with_front' => false,
+        ],
+        'menu_position' => 21,
+        'menu_icon' => 'dashicons-calendar-alt',
+        'supports' => ['title', 'editor', 'thumbnail', 'excerpt', 'revisions'],
+    ]);
+});
+
+/**
+ * Flush rewrite rules once after registering Event CPT.
+ *
+ * @return void
+ */
+add_action('init', function () {
+    $flushKey = 'animated_event_rewrite_flushed_v1';
+
+    if (get_option($flushKey) === '1') {
+        return;
+    }
+
+    flush_rewrite_rules(false);
+    update_option($flushKey, '1', true);
+}, 20);

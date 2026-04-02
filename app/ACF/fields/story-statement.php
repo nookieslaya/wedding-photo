@@ -23,13 +23,21 @@ $storyStatement
         'label' => 'Description',
         'rows' => 4,
     ])
-        ->setWidth(50)
-    ->addImage('bottom_gif', [
-        'label' => 'Bottom GIF',
-        'instructions' => 'Upload animated GIF image for the bottom visual.',
-        'return_format' => 'array',
-        'preview_size' => 'medium',
+        ->setWidth(100)
+    ->addRepeater('gallery', [
+        'label' => 'Carousel gallery',
+        'instructions' => 'Add images for the story carousel (desktop: 3 visible).',
+        'layout' => 'row',
+        'button_label' => 'Add image',
+        'min' => 3,
     ])
-        ->setWidth(50);
+        ->setWidth(100)
+        ->addImage('image', [
+            'label' => 'Image',
+            'return_format' => 'array',
+            'preview_size' => 'medium',
+            'required' => 1,
+        ])
+        ->endRepeater();
 
 return $storyStatement;

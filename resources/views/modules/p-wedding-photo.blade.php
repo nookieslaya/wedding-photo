@@ -6,14 +6,18 @@
 
 @if ($heading && !empty($photos))
     <section class="p-wedding-photo relative bg-black text-white" data-wedding-photo>
-        <div class="sticky top-0 z-10 flex min-h-screen items-center overflow-hidden md:overflow-visible" data-wedding-sticky>
-            <div class="pointer-events-none absolute inset-0 bg-gradient-to-b from-black via-black/90 to-black"></div>
+        <div class="sticky top-0 z-10 flex min-h-screen items-center overflow-hidden md:overflow-visible"
+            data-wedding-sticky>
+            <div class="pointer-events-none absolute inset-0 z-0 bg-gradient-to-b from-black via-black/90 to-black">
+            </div>
+            <canvas class="pointer-events-none absolute inset-0 z-[5] h-full w-full opacity-80 mix-blend-screen"
+                data-wedding-smoke></canvas>
 
-            <div class="absolute inset-0 z-10 flex items-start justify-center px-6 pt-8 text-center md:px-10 md:pt-12"
+            <div class="absolute inset-0 z-10 flex items-start justify-center px-6 pt-8 text-center md:px-10 md:pt-12 md:pb-12"
                 data-wedding-title-wrap>
-                <div class="relative inline-flex flex-col items-center justify-center px-4 py-3 md:px-8 md:py-5"
+                <div class="relative inline-flex flex-col items-center justify-center px-4 py-3 md:px-8 md:mb-10"
                     data-wedding-title-shell>
-                    <h2 class="relative z-10 max-w-6xl text-[clamp(2.4rem,13vw,12rem)] font-semibold uppercase leading-[0.9] tracking-tight text-white"
+                    <h2 class="relative z-10 max-w-6xl text-[clamp(2.4rem,13vw,12rem)]  font-semibold uppercase leading-[0.9] tracking-tight text-white"
                         data-wedding-title>
                         {{ $heading }}
                     </h2>
@@ -45,7 +49,8 @@
                                 class="absolute left-1/2 top-1/2 h-[34%] w-[120%] bg-white [clip-path:polygon(0_34%,0_66%,100%_92%,100%_8%)]"
                                 data-wedding-aperture-blade></span>
 
-                            <span class="absolute left-1/2 top-1/2 h-[30%] w-[30%] bg-black [clip-path:polygon(50%_6%,88%_28%,88%_72%,50%_94%,12%_72%,12%_28%)]"
+                            <span
+                                class="absolute left-1/2 top-1/2 h-[30%] w-[30%] bg-black [clip-path:polygon(50%_6%,88%_28%,88%_72%,50%_94%,12%_72%,12%_28%)]"
                                 data-wedding-aperture-hole></span>
 
                         </div>
@@ -78,21 +83,19 @@
                             $desktopAlign = $index % 2 === 0 ? 'md:justify-self-start' : 'md:justify-self-end';
                             $desktopWidth = $sizeClass . ' ' . $desktopAlign;
                             $imageMaxHeight = $isLandscape ? 'md:max-h-[52svh]' : 'md:max-h-[68svh]';
+                            $desktopSpacingVariants = ['md:mt-0', 'md:mt-2', 'md:mt-4', 'md:mt-1'];
+                            $desktopSpacingClass = $desktopSpacingVariants[$index % count($desktopSpacingVariants)];
                         @endphp
 
                         @if (!empty($image['ID']))
-                            <figure class="group w-full md:w-auto {{ $desktopWidth }}" data-wedding-item>
+                            <figure class="group w-full md:w-auto {{ $desktopWidth }} {{ $desktopSpacingClass }}" data-wedding-item>
                                 <div class="relative overflow-hidden rounded-sm" data-wedding-image-shell>
                                     {!! wp_get_attachment_image($image['ID'], 'large', false, [
-                                        'class' =>
-                                            'h-auto w-full object-contain grayscale ' .
-                                            $imageMaxHeight,
+                                        'class' => 'h-auto w-full object-contain grayscale ' . $imageMaxHeight,
                                     ]) !!}
 
                                     {!! wp_get_attachment_image($image['ID'], 'large', false, [
-                                        'class' =>
-                                            'pointer-events-none absolute inset-0 h-full w-full object-contain ' .
-                                            $imageMaxHeight,
+                                        'class' => 'pointer-events-none absolute inset-0 h-full w-full object-contain ' . $imageMaxHeight,
                                         'data-wedding-image-color' => '1',
                                     ]) !!}
                                 </div>

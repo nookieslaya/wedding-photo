@@ -39,7 +39,9 @@ class FieldRegistrar
         $flexibleModules
             ->endFlexibleContent();
 
-        $pageModules->setLocation('post_type', '==', 'page');
+        $pageModules
+            ->setLocation('post_type', '==', 'page')
+            ->or('post_type', '==', 'event');
 
         acf_add_local_field_group($pageModules->build());
     }

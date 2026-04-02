@@ -12,8 +12,10 @@ class FlexibleModules extends Composer
      * @var array
      */
     protected static $views = [
+        'single',
         'page',
         'front-page',
+        'single-event',
     ];
 
     /**

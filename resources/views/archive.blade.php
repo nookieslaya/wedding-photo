@@ -1,7 +1,7 @@
 @extends('layouts.app')
 
 @section('content')
-  @if (is_post_type_archive('event') || request()->path() === 'wydarzenia')
+  @if (is_post_type_archive('event'))
     @include('partials.event-archive-list')
   @else
     @include('partials.page-header')
@@ -22,8 +22,8 @@
   @endif
 @endsection
 
-@section('sidebar')
-  @if (! (is_post_type_archive('event') || request()->path() === 'wydarzenia'))
+@if (! is_post_type_archive('event'))
+  @section('sidebar')
     @include('sections.sidebar')
-  @endif
-@endsection
+  @endsection
+@endif
