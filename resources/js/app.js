@@ -3,6 +3,7 @@ import { initHeroModule } from './modules/hero';
 import { initWeddingPhotoModule } from './modules/p-wedding-photo';
 import { initStoryStatementModule } from './modules/story-statement';
 import { initEventsListModule } from './modules/events-list';
+import { initEventsSidebarContentModule } from './modules/events-sidebar-content';
 
 const safeInit = (name, fn) => {
   try {
@@ -18,6 +19,7 @@ const boot = () => {
   safeInit('wedding-photo', initWeddingPhotoModule);
   safeInit('story-statement', initStoryStatementModule);
   safeInit('events-list', initEventsListModule);
+  safeInit('events-sidebar-content', initEventsSidebarContentModule);
   window.__animatedThemeBooted = true;
 };
 

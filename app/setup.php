@@ -211,3 +211,32 @@ add_action('init', function () {
     flush_rewrite_rules(false);
     update_option($flushKey, '1', true);
 }, 20);
+
+/**
+ * Register global settings options pages.
+ *
+ * @return void
+ */
+add_action('acf/init', function () {
+    if (! function_exists('acf_add_options_page') || ! function_exists('acf_add_options_sub_page')) {
+        return;
+    }
+
+    acf_add_options_page([
+        'page_title' => __('Global Settings', 'sage'),
+        'menu_title' => __('Global Settings', 'sage'),
+        'menu_slug' => 'global-settings',
+        'capability' => 'edit_posts',
+        'redirect' => true,
+        'position' => 60,
+        'icon_url' => 'dashicons-admin-generic',
+    ]);
+
+    acf_add_options_sub_page([
+        'page_title' => __('Social Media', 'sage'),
+        'menu_title' => __('Social Media', 'sage'),
+        'parent_slug' => 'global-settings',
+        'menu_slug' => 'global-settings-social-media',
+        'capability' => 'edit_posts',
+    ]);
+});

@@ -1,58 +1,5 @@
 import { gsap, prefersReducedMotion } from '../shared/motion';
-
-const SCRAMBLE_CHARS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
-const scrambleRafs = new WeakMap();
-
-const stopScramble = (element) => {
-  const rafId = scrambleRafs.get(element);
-  if (rafId) {
-    cancelAnimationFrame(rafId);
-    scrambleRafs.delete(element);
-  }
-};
-
-const runTitleScramble = (element) => {
-  if (!element) {
-    return;
-  }
-
-  const original = element.dataset.originalTitle ?? element.textContent ?? '';
-  element.dataset.originalTitle = original;
-  stopScramble(element);
-
-  const chars = Array.from(original);
-  const start = performance.now();
-  const duration = 1000;
-
-  const isScrambleCandidate = (char) => /[A-Za-z0-9]/.test(char);
-  const randomChar = () => SCRAMBLE_CHARS[Math.floor(Math.random() * SCRAMBLE_CHARS.length)];
-
-  const tick = (now) => {
-    const elapsed = now - start;
-    const progress = Math.min(1, elapsed / duration);
-    const revealCount = Math.floor(progress * chars.length);
-
-    const scrambled = chars.map((char, index) => {
-      if (!isScrambleCandidate(char)) {
-        return char;
-      }
-      return index <= revealCount ? char : randomChar();
-    }).join('');
-
-    element.textContent = scrambled;
-
-    if (progress < 1) {
-      const rafId = requestAnimationFrame(tick);
-      scrambleRafs.set(element, rafId);
-    } else {
-      element.textContent = original;
-      scrambleRafs.delete(element);
-    }
-  };
-
-  const rafId = requestAnimationFrame(tick);
-  scrambleRafs.set(element, rafId);
-};
+import { runTextScramble } from '../shared/text-scramble';
 
 export const initEventsListModule = () => {
   const sections = document.querySelectorAll('[data-events-module]');
@@ -104,7 +51,7 @@ export const initEventsListModule = () => {
         state.radius = 0;
         applyReveal();
 
-        runTitleScramble(title);
+        runTextScramble(title);
 
         gsap.to(colorLayer, {
           autoAlpha: 1,

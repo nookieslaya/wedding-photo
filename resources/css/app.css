@@ -1,5 +1,6 @@
 @import "tailwindcss" theme(static);
+@import "./modules/events-hero.css";
+@import "./modules/events-sidebar-content.css";
 @source "../../app/**/*.php";
 @source "../**/*.blade.php";
 @source "../**/*.js";
-
