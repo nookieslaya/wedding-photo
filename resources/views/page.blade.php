@@ -10,6 +10,11 @@
           @includeIf("modules.{$layout}", ['module' => $module])
         @endif
       @endforeach
+
+      {{-- Jeśli strona ma ręcznie wpisaną treść (np. shortcode), pokaż ją pod modułami ACF. --}}
+      @if (trim((string) get_post_field('post_content', get_the_ID())) !== '')
+        @includeFirst(['partials.content-page', 'partials.content'])
+      @endif
     @else
       @include('partials.page-header')
       @includeFirst(['partials.content-page', 'partials.content'])
