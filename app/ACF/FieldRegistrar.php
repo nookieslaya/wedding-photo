@@ -91,6 +91,30 @@ class FieldRegistrar
             ->setLocation('options_page', '==', 'global-settings-social-media');
 
         acf_add_local_field_group($globalSocialMedia->build());
+
+        $globalNavigation = new FieldsBuilder('global-navigation', [
+            'title' => 'Global Navigation',
+        ]);
+
+        $globalNavigation
+            ->addTab('navigation_tab', [
+                'label' => 'Navigation',
+            ])
+            ->addImage('navigation_brand_logo', [
+                'label' => 'Brand logo',
+                'instructions' => 'Optional. Shown in left navigation and mobile menu. If empty, brand text will be used.',
+                'return_format' => 'array',
+                'preview_size' => 'medium',
+            ])
+                ->setWidth(50)
+            ->addText('navigation_brand_text', [
+                'label' => 'Brand text',
+                'default_value' => get_bloginfo('name'),
+            ])
+                ->setWidth(50)
+            ->setLocation('options_page', '==', 'global-settings');
+
+        acf_add_local_field_group($globalNavigation->build());
     }
 
     /**

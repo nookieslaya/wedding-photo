@@ -1,5 +1,5 @@
 import { gsap, prefersReducedMotion } from '../shared/motion';
-import { runTextScramble } from '../shared/text-scramble';
+import { runTextScramble, TEXT_SCRAMBLE_SETTINGS } from '../shared/text-scramble';
 
 export const initEventsListModule = () => {
   const sections = document.querySelectorAll('[data-events-module]');
@@ -22,6 +22,7 @@ export const initEventsListModule = () => {
         x: imageShell.clientWidth * 0.5,
         y: imageShell.clientHeight * 0.5,
       };
+      let titleUnlockTimer = null;
 
       const applyReveal = () => {
         colorLayer.style.clipPath = `circle(${state.radius}px at ${state.x}px ${state.y}px)`;
@@ -51,7 +52,23 @@ export const initEventsListModule = () => {
         state.radius = 0;
         applyReveal();
 
+        if (titleUnlockTimer) {
+          clearTimeout(titleUnlockTimer);
+        }
+
+        const lockedTitleHeight = Math.ceil(title.getBoundingClientRect().height);
+        gsap.set(title, {
+          minHeight: lockedTitleHeight,
+          maxHeight: lockedTitleHeight,
+          overflow: 'hidden',
+        });
+
         runTextScramble(title);
+
+        titleUnlockTimer = window.setTimeout(() => {
+          gsap.set(title, { clearProps: 'minHeight,maxHeight,overflow' });
+          titleUnlockTimer = null;
+        }, TEXT_SCRAMBLE_SETTINGS.duration + 60);
 
         gsap.to(colorLayer, {
           autoAlpha: 1,
@@ -75,6 +92,12 @@ export const initEventsListModule = () => {
       });
 
       card.addEventListener('mouseleave', () => {
+        if (titleUnlockTimer) {
+          clearTimeout(titleUnlockTimer);
+          titleUnlockTimer = null;
+        }
+        gsap.set(title, { clearProps: 'minHeight,maxHeight,overflow' });
+
         gsap.killTweensOf(state);
         gsap.to(colorLayer, {
           autoAlpha: 0,

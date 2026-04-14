@@ -4,6 +4,7 @@ import { initWeddingPhotoModule } from './modules/p-wedding-photo';
 import { initStoryStatementModule } from './modules/story-statement';
 import { initEventsListModule } from './modules/events-list';
 import { initEventsSidebarContentModule } from './modules/events-sidebar-content';
+import { initSiteNavigationModule } from './modules/site-navigation';
 
 const safeInit = (name, fn) => {
   try {
@@ -20,6 +21,7 @@ const boot = () => {
   safeInit('story-statement', initStoryStatementModule);
   safeInit('events-list', initEventsListModule);
   safeInit('events-sidebar-content', initEventsSidebarContentModule);
+  safeInit('site-navigation', initSiteNavigationModule);
   window.__animatedThemeBooted = true;
 };
 

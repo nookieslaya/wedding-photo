@@ -1,4 +1,6 @@
-const SCRAMBLE_CHARS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+const UPPERCASE_CHARS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+const LOWERCASE_CHARS = 'abcdefghijklmnopqrstuvwxyz';
+const DIGIT_CHARS = '0123456789';
 
 // Single place to tune animation speed globally.
 export const TEXT_SCRAMBLE_SETTINGS = {
@@ -8,7 +10,19 @@ export const TEXT_SCRAMBLE_SETTINGS = {
 const rafMap = new WeakMap();
 
 const isScrambleCandidate = (char) => /[A-Za-z0-9]/.test(char);
-const randomChar = () => SCRAMBLE_CHARS[Math.floor(Math.random() * SCRAMBLE_CHARS.length)];
+const pickRandom = (charset) => charset[Math.floor(Math.random() * charset.length)];
+const randomCharFor = (char) => {
+  if (/[A-Z]/.test(char)) {
+    return pickRandom(UPPERCASE_CHARS);
+  }
+  if (/[a-z]/.test(char)) {
+    return pickRandom(LOWERCASE_CHARS);
+  }
+  if (/[0-9]/.test(char)) {
+    return pickRandom(DIGIT_CHARS);
+  }
+  return char;
+};
 
 export const stopTextScramble = (element) => {
   const rafId = rafMap.get(element);
@@ -41,7 +55,7 @@ export const runTextScramble = (element, options = {}) => {
       if (!isScrambleCandidate(char)) {
         return char;
       }
-      return index <= revealCount ? char : randomChar();
+      return index <= revealCount ? char : randomCharFor(char);
     }).join('');
 
     if (progress < 1) {

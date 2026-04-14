@@ -30,7 +30,10 @@ const initWeddingCloudLayer = (section, canvas) => {
 
   const buildClouds = () => {
     clouds.length = 0;
-    const count = Math.max(8, Math.min(14, Math.round((cssWidth * cssHeight) / 150000)));
+    const count = Math.max(
+      8,
+      Math.min(14, Math.round((cssWidth * cssHeight) / 150000)),
+    );
     const diagonalSlope = cssHeight / Math.max(1, cssWidth);
 
     for (let i = 0; i < count; i += 1) {
@@ -69,12 +72,20 @@ const initWeddingCloudLayer = (section, canvas) => {
         cloud.y += cloud.vy;
 
         // Keep a stable TL -> BR drift with tiny natural jitter.
-        cloud.vx += (cloud.baseVx - cloud.vx) * 0.018 + Math.sin(t * 0.18 + cloud.seed) * 0.0008;
-        cloud.vy += (cloud.baseVy - cloud.vy) * 0.018 + Math.cos(t * 0.16 + cloud.seed * 0.7) * 0.00055;
+        cloud.vx +=
+          (cloud.baseVx - cloud.vx) * 0.018 +
+          Math.sin(t * 0.18 + cloud.seed) * 0.0008;
+        cloud.vy +=
+          (cloud.baseVy - cloud.vy) * 0.018 +
+          Math.cos(t * 0.16 + cloud.seed * 0.7) * 0.00055;
         cloud.vx *= 0.992;
         cloud.vy *= 0.992;
 
-        if (cloud.age >= 1 || cloud.x > cssWidth + cloud.size * 1.1 || cloud.y > cssHeight + cloud.size * 1.1) {
+        if (
+          cloud.age >= 1 ||
+          cloud.x > cssWidth + cloud.size * 1.1 ||
+          cloud.y > cssHeight + cloud.size * 1.1
+        ) {
           cloud.x = -cloud.size * (0.9 + Math.random() * 0.5);
           cloud.y = -cloud.size * (0.9 + Math.random() * 0.5);
           cloud.age = 0;
@@ -107,8 +118,18 @@ const initWeddingCloudLayer = (section, canvas) => {
           const px = cloud.x + puff.x;
           const py = cloud.y + puff.y;
           const radius = cloud.size * puff.s;
-          const gradient = ctx.createRadialGradient(px, py, radius * 0.12, px, py, radius);
-          gradient.addColorStop(0, `rgba(255,255,255,${cloud.alpha * lifeFade * 1.28})`);
+          const gradient = ctx.createRadialGradient(
+            px,
+            py,
+            radius * 0.12,
+            px,
+            py,
+            radius,
+          );
+          gradient.addColorStop(
+            0,
+            `rgba(255,255,255,${cloud.alpha * lifeFade * 1.28})`,
+          );
           gradient.addColorStop(1, 'rgba(255,255,255,0)');
           ctx.fillStyle = gradient;
           ctx.beginPath();
@@ -120,7 +141,14 @@ const initWeddingCloudLayer = (section, canvas) => {
       ctx.globalCompositeOperation = 'source-over';
 
       if (pointer.active) {
-        const halo = ctx.createRadialGradient(pointer.x, pointer.y, 0, pointer.x, pointer.y, 190);
+        const halo = ctx.createRadialGradient(
+          pointer.x,
+          pointer.y,
+          0,
+          pointer.x,
+          pointer.y,
+          190,
+        );
         halo.addColorStop(0, 'rgba(255,255,255,0.11)');
         halo.addColorStop(1, 'rgba(255,255,255,0)');
         ctx.fillStyle = halo;
@@ -221,8 +249,12 @@ export const initWeddingPhotoModule = () => {
     const apertureDisc = section.querySelector('[data-wedding-aperture-disc]');
     const apertureHole = section.querySelector('[data-wedding-aperture-hole]');
     const apertureCore = section.querySelector('[data-wedding-aperture-core]');
-    const apertureLabel = section.querySelector('[data-wedding-aperture-label]');
-    const apertureBlades = section.querySelectorAll('[data-wedding-aperture-blade]');
+    const apertureLabel = section.querySelector(
+      '[data-wedding-aperture-label]',
+    );
+    const apertureBlades = section.querySelectorAll(
+      '[data-wedding-aperture-blade]',
+    );
     const gallery = section.querySelector('[data-wedding-gallery]');
     const items = section.querySelectorAll('[data-wedding-item]');
     const imageShells = section.querySelectorAll('[data-wedding-image-shell]');
@@ -245,7 +277,20 @@ export const initWeddingPhotoModule = () => {
 
     if (prefersReducedMotion) {
       gsap.set(section, { clearProps: 'minHeight' });
-      gsap.set([titleWrap, titleShell, title, aperture, apertureDisc, apertureHole, apertureCore, gallery, ...items], { clearProps: 'all' });
+      gsap.set(
+        [
+          titleWrap,
+          titleShell,
+          title,
+          aperture,
+          apertureDisc,
+          apertureHole,
+          apertureCore,
+          gallery,
+          ...items,
+        ],
+        { clearProps: 'all' },
+      );
       gsap.set(apertureBlades, { clearProps: 'all' });
       if (isMobile() && stickyContainer) {
         gsap.set(stickyContainer, {
@@ -260,7 +305,19 @@ export const initWeddingPhotoModule = () => {
 
     if (isMobile()) {
       gsap.set(section, { clearProps: 'minHeight' });
-      gsap.set([titleWrap, titleShell, title, aperture, apertureDisc, apertureHole, apertureCore, gallery], { clearProps: 'all' });
+      gsap.set(
+        [
+          titleWrap,
+          titleShell,
+          title,
+          aperture,
+          apertureDisc,
+          apertureHole,
+          apertureCore,
+          gallery,
+        ],
+        { clearProps: 'all' },
+      );
       gsap.set(apertureBlades, { clearProps: 'all' });
       if (stickyContainer) {
         gsap.set(stickyContainer, {
@@ -307,7 +364,10 @@ export const initWeddingPhotoModule = () => {
     }
 
     const desktopScrollEnd = Math.max(240, 170 + items.length * 32);
-    const desktopMinHeight = Math.max(window.innerHeight * 2.6, window.innerHeight + items.length * window.innerHeight * 0.75);
+    const desktopMinHeight = Math.max(
+      window.innerHeight * 2.6,
+      window.innerHeight + items.length * window.innerHeight * 0.75,
+    );
 
     gsap.set(section, { minHeight: desktopMinHeight });
 
@@ -320,7 +380,11 @@ export const initWeddingPhotoModule = () => {
         return;
       }
 
-      const state = { radius: 0, x: shell.clientWidth * 0.5, y: shell.clientHeight * 0.5 };
+      const state = {
+        radius: 0,
+        x: shell.clientWidth * 0.5,
+        y: shell.clientHeight * 0.5,
+      };
       let lastPointer = null;
       const pointerDir = { x: 1, y: 0 };
 
@@ -361,7 +425,10 @@ export const initWeddingPhotoModule = () => {
 
       const getMaxRadius = () => {
         const rect = shell.getBoundingClientRect();
-        return Math.hypot(Math.max(state.x, rect.width - state.x), Math.max(state.y, rect.height - state.y));
+        return Math.hypot(
+          Math.max(state.x, rect.width - state.x),
+          Math.max(state.y, rect.height - state.y),
+        );
       };
 
       shell.addEventListener('mouseenter', (event) => {
@@ -458,18 +525,35 @@ export const initWeddingPhotoModule = () => {
 
     const setApertureState = (phase) => {
       const clampedPhase = gsap.utils.clamp(0, 1, phase);
-      let upperStopIndex = apertureStops.findIndex((stop) => clampedPhase <= stop.position);
+      let upperStopIndex = apertureStops.findIndex(
+        (stop) => clampedPhase <= stop.position,
+      );
       if (upperStopIndex === -1) {
         upperStopIndex = apertureStops.length - 1;
       }
       const lowerStopIndex = Math.max(0, upperStopIndex - 1);
       const lowerStop = apertureStops[lowerStopIndex];
       const upperStop = apertureStops[upperStopIndex];
-      const segmentRange = Math.max(0.0001, upperStop.position - lowerStop.position);
-      const segmentProgress = gsap.utils.clamp(0, 1, (clampedPhase - lowerStop.position) / segmentRange);
+      const segmentRange = Math.max(
+        0.0001,
+        upperStop.position - lowerStop.position,
+      );
+      const segmentProgress = gsap.utils.clamp(
+        0,
+        1,
+        (clampedPhase - lowerStop.position) / segmentRange,
+      );
 
-      const spreadAmount = gsap.utils.interpolate(lowerStop.spread, upperStop.spread, segmentProgress);
-      const holeAmount = gsap.utils.interpolate(lowerStop.hole, upperStop.hole, segmentProgress);
+      const spreadAmount = gsap.utils.interpolate(
+        lowerStop.spread,
+        upperStop.spread,
+        segmentProgress,
+      );
+      const holeAmount = gsap.utils.interpolate(
+        lowerStop.hole,
+        upperStop.hole,
+        segmentProgress,
+      );
       const closeAmount = 1 - spreadAmount;
       const innerSpin = clampedPhase * 160;
 
@@ -510,7 +594,9 @@ export const initWeddingPhotoModule = () => {
 
       if (apertureLabel) {
         let nearestStopIndex = 0;
-        let nearestDistance = Math.abs(clampedPhase - apertureStops[0].position);
+        let nearestDistance = Math.abs(
+          clampedPhase - apertureStops[0].position,
+        );
         apertureStops.forEach((stop, index) => {
           const distance = Math.abs(clampedPhase - stop.position);
           if (distance < nearestDistance) {
@@ -547,12 +633,12 @@ export const initWeddingPhotoModule = () => {
       titleShell,
       {
         scale: 1.25,
-        y: 500,
+        y: 400,
         opacity: 1,
       },
       {
         scale: 0.42,
-        y: 260,
+        y: 120,
         opacity: 1,
         ease: 'none',
         duration: titleSettleAt,
@@ -597,7 +683,7 @@ export const initWeddingPhotoModule = () => {
     timeline.fromTo(
       gallery,
       { y: 180 },
-      { y: 0, ease: 'power2.out', duration: 0.44 },
+      { y: 0, ease: 'power2.out', duration: 0.8 },
       galleryRevealAt,
     );
 

@@ -79,7 +79,7 @@
                                     </div>
                                 </div>
 
-                                <h3 class="mt-4 text-[1.08rem] font-light leading-[1.35] tracking-medium no-underline md:mt-3 md:text-[2.45rem]"
+                                <h3 class="mt-4 text-[1.08rem] font-light leading-[1.35] tracking-medium normal-case no-underline md:mt-3 md:text-[2rem] xl:text-[2.45rem]"
                                     style="text-decoration:none !important;" data-events-title>
                                     {{ $eventTitle }}
                                 </h3>

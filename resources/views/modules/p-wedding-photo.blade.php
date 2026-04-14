@@ -71,7 +71,7 @@
                     </p>
                 @endif
 
-                <div class="grid grid-cols-1 gap-5 md:grid-cols-1 md:gap-y-12">
+                <div class="grid grid-cols-1 gap-5 md:grid-cols-1 md:gap-y-12 md:pb-10 mt-20">
                     @foreach ($photos as $index => $photo)
                         @php
                             $image = $photo['image'] ?? null;
@@ -88,7 +88,8 @@
                         @endphp
 
                         @if (!empty($image['ID']))
-                            <figure class="group w-full md:w-auto {{ $desktopWidth }} {{ $desktopSpacingClass }}" data-wedding-item>
+                            <figure class="group w-full md:w-auto {{ $desktopWidth }} {{ $desktopSpacingClass }}"
+                                data-wedding-item>
                                 <div class="relative overflow-hidden rounded-sm" data-wedding-image-shell>
                                     {!! wp_get_attachment_image($image['ID'], 'large', false, [
                                         'class' => 'h-auto w-full object-contain grayscale ' . $imageMaxHeight,
