@@ -1,1 +1,111 @@
 @import "tailwindcss";
+
+.availability-map-storage--hidden {
+  display: none !important;
+}
+
+.availability-admin-ui {
+  border: 1px solid #d6d8dd;
+  border-radius: 6px;
+  background: #ffffff;
+  padding: 14px;
+}
+
+.availability-admin-ui__bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+.availability-admin-ui__tools {
+  display: grid;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+
+.availability-admin-ui__statuses {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.availability-admin-ui__statuses .button.is-selected {
+  background: #111827;
+  border-color: #111827;
+  color: #fff;
+}
+
+.availability-admin-ui__note {
+  width: 100%;
+  min-height: 36px;
+  border: 1px solid #ccd0d4;
+  border-radius: 4px;
+  padding: 0 10px;
+}
+
+.availability-admin-ui__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.availability-admin-ui__weekdays,
+.availability-admin-ui__days {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 6px;
+}
+
+.availability-admin-ui__weekdays {
+  margin-bottom: 6px;
+  font-size: 11px;
+  text-transform: uppercase;
+  color: #6b7280;
+  text-align: center;
+}
+
+.availability-admin-day {
+  min-height: 34px;
+  border: 1px solid #d1d5db;
+  border-radius: 4px;
+  background: #f9fafb;
+  cursor: pointer;
+  transition: border-color 120ms ease, background-color 120ms ease;
+}
+
+.availability-admin-day.is-muted {
+  opacity: 0.35;
+  cursor: default;
+}
+
+.availability-admin-day.is-none {
+  background: #f9fafb;
+}
+
+.availability-admin-day.is-available {
+  border-color: #86efac;
+  background: #dcfce7;
+}
+
+.availability-admin-day.is-tentative {
+  border-color: #fcd34d;
+  background: #fef3c7;
+}
+
+.availability-admin-day.is-booked {
+  border-color: #fca5a5;
+  background: #fee2e2;
+}
+
+.availability-admin-day.is-picked {
+  outline: 2px solid #111827;
+  outline-offset: -2px;
+}
+
+.availability-admin-ui__summary {
+  margin: 10px 0 0;
+  font-size: 12px;
+  color: #374151;
+}

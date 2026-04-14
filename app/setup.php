@@ -29,7 +29,16 @@ add_filter('block_editor_settings_all', function ($settings) {
  * @return void
  */
 add_action('admin_head', function () {
-    if (! get_current_screen()?->is_block_editor()) {
+    $screen = get_current_screen();
+
+    if (! $screen) {
+        return;
+    }
+
+    $isPostEditorScreen = in_array($screen->base, ['post', 'post-new'], true);
+    $isBlockEditorScreen = method_exists($screen, 'is_block_editor') ? (bool) $screen->is_block_editor() : false;
+
+    if (! $isPostEditorScreen && ! $isBlockEditorScreen) {
         return;
     }
 
@@ -43,6 +52,7 @@ add_action('admin_head', function () {
         }
     }
     echo Vite::withEntryPoints([
+        'resources/css/editor.css',
         'resources/js/editor.js',
     ])->toHtml();
 });

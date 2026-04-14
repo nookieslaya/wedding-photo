@@ -32,7 +32,7 @@
             <aside class="md:sticky md:top-28 md:self-start">
                 <div class="max-w-[34rem] space-y-7 md:space-y-8">
                     <div>
-                        <h2 class="text-[2.2rem] font-semibold uppercase leading-none tracking-[0.02em] md:text-[3rem]">
+                        <h2 class="text-[clamp(1.65rem,3.1vw,3.15rem)] font-semibold uppercase leading-[0.94] tracking-[0.01em]">
                             {{ $sidebarTitle }}
                         </h2>
                         <p class="mt-3 text-lg font-medium text-black/85 md:text-xl">{{ $sidebarSubtitle }}</p>

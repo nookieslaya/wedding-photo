@@ -11,17 +11,14 @@ $products = new FieldsBuilder('products', [
 $products
     ->addText('section_title', [
         'label' => 'Section title',
-        'default_value' => 'PRODUCTS',
     ])
         ->setWidth(30)
     ->addText('section_subtitle', [
         'label' => 'Section subtitle',
-        'default_value' => '(PRODUKTY)',
     ])
         ->setWidth(30)
     ->addText('heading', [
         'label' => 'Heading',
-        'default_value' => 'Produkty i dodatki do Twojej historii',
     ])
         ->setWidth(40)
     ->addTextarea('description', [
@@ -44,7 +41,6 @@ $products
     ])
         ->addText('label', [
             'label' => 'Small label',
-            'default_value' => 'Produkt',
         ])
             ->setWidth(25)
         ->addText('title', [

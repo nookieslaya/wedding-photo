@@ -61,12 +61,12 @@
                     </button>
                 </div>
 
-                <nav class="flex flex-1 items-center justify-center" aria-label="Mobile navigation">
-                    <ul class="flex flex-col items-center gap-8">
+                <nav class="flex flex-1 items-start justify-center overflow-y-auto px-4 pt-8 pb-6" aria-label="Mobile navigation">
+                    <ul class="flex w-full flex-col items-center gap-5">
                         @foreach ($menuItems as $menuItem)
                             <li>
                                 <a href="{{ $menuItem->url }}"
-                                    class="text-[clamp(1.9rem,7.4vw,3.1rem)] font-semibold uppercase tracking-[0.08em] text-white no-underline"
+                                    class="text-[clamp(1.45rem,5.2vw,2.2rem)] font-semibold uppercase tracking-[0.08em] text-white no-underline"
                                     style="text-decoration:none !important;" data-nav-link>
                                     {{ $menuItem->title }}
                                 </a>

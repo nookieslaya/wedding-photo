@@ -26,7 +26,7 @@
                 @endif
             </header>
 
-            <div class="space-y-4 md:space-y-6">
+            <div class="space-y-3 md:space-y-4">
                 @foreach ($events as $event)
                     @php
                         $eventId = $event->ID;
@@ -42,7 +42,7 @@
                             !empty($eventTerms) && !is_wp_error($eventTerms) ? $eventTerms[0]->name : 'EVENT';
                     @endphp
 
-                    <article class="overflow-hidden rounded-[4px] bg-[#ececee] p-2 md:max-h-[575px] md:p-0"
+                    <article class="overflow-hidden rounded-[4px] bg-[#ececee] p-2 md:max-h-[470px] md:p-0"
                         data-events-item>
                         <a href="{{ $eventLink }}"
                             class="grid gap-3 no-underline hover:no-underline focus:no-underline md:h-full md:grid-cols-[44%_56%] md:items-stretch md:gap-0"
@@ -63,7 +63,7 @@
                                 @endif
                             </div>
 
-                            <div class="flex flex-col md:gap-20 px-3 pb-2 pt-1 md:px-8 md:p-20">
+                            <div class="flex flex-col px-3 pb-2 pt-1 md:gap-9 md:px-7 md:py-9 lg:gap-10 lg:px-8 lg:py-10">
                                 <div
                                     class="flex items-center justify-between gap-4 border-b border-black/10 pb-3 md:pb-4">
                                     <div class="flex items-center gap-2">
@@ -79,7 +79,7 @@
                                     </div>
                                 </div>
 
-                                <h3 class="mt-4 text-[1.08rem] font-light leading-[1.35] tracking-medium normal-case no-underline md:mt-3 md:text-[2rem] xl:text-[2.45rem]"
+                                <h3 class="mt-4 text-[1.08rem] font-light leading-[1.35] tracking-medium normal-case no-underline md:mt-3 md:text-[1.5rem] xl:text-[1.82rem]"
                                     style="text-decoration:none !important;" data-events-title>
                                     {{ $eventTitle }}
                                 </h3>

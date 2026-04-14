@@ -1,13 +1,7 @@
 @php
     $sectionTitle = trim((string) ($module['section_title'] ?? ''));
-    $sectionTitle = $sectionTitle !== '' ? $sectionTitle : 'OFFER';
-
     $sectionSubtitle = trim((string) ($module['section_subtitle'] ?? ''));
-    $sectionSubtitle = $sectionSubtitle !== '' ? $sectionSubtitle : '(OFERTA)';
-
     $heading = trim((string) ($module['heading'] ?? ''));
-    $heading = $heading !== '' ? $heading : 'Oferta dopasowana do Twojego wydarzenia';
-
     $description = trim((string) ($module['description'] ?? ''));
 
     $cards = $module['offer_cards'] ?? [];
@@ -25,14 +19,20 @@
         <div class="relative z-10 mx-auto w-full max-w-[1900px] px-4 py-16 md:px-10 md:py-24">
             <div class="grid grid-cols-1 gap-10 md:grid-cols-[30%_1fr] md:gap-14">
                 <div class="md:sticky md:top-28 md:self-start" data-offer-left>
-                    <p class="text-[0.75rem] uppercase tracking-[0.28em] text-white/55" data-offer-left-anim>{{ $sectionTitle }}</p>
-                    <p class="mt-2 text-[0.72rem] uppercase tracking-[0.16em] text-white/38">{{ $sectionSubtitle }}</p>
+                    @if ($sectionTitle !== '')
+                        <p class="text-[0.7rem] uppercase tracking-[0.24em] text-white/55 md:text-[0.74rem]" data-offer-left-anim>{{ $sectionTitle }}</p>
+                    @endif
+                    @if ($sectionSubtitle !== '')
+                        <p class="mt-2 text-[0.72rem] uppercase tracking-[0.16em] text-white/38">{{ $sectionSubtitle }}</p>
+                    @endif
 
-                    <h2
-                        class="mt-7 text-[clamp(1.85rem,4.2vw,4rem)] font-semibold uppercase leading-[0.94] tracking-[0.01em] text-white"
-                        data-offer-left-anim>
-                        {{ $heading }}
-                    </h2>
+                    @if ($heading !== '')
+                        <h2
+                            class="mt-7 text-[clamp(1.65rem,3.1vw,3.15rem)] font-semibold uppercase leading-[0.94] tracking-[0.01em] text-white"
+                            data-offer-left-anim>
+                            {{ $heading }}
+                        </h2>
+                    @endif
 
                     @if ($description !== '')
                         <p class="mt-6 max-w-[36ch] text-sm leading-relaxed text-white/72 md:text-base">

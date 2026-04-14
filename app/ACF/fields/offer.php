@@ -11,17 +11,14 @@ $offer = new FieldsBuilder('offer', [
 $offer
     ->addText('section_title', [
         'label' => 'Section title',
-        'default_value' => 'OFFER',
     ])
         ->setWidth(30)
     ->addText('section_subtitle', [
         'label' => 'Section subtitle',
-        'default_value' => '(OFERTA)',
     ])
         ->setWidth(30)
     ->addText('heading', [
         'label' => 'Heading',
-        'default_value' => 'Oferta dopasowana do Twojego wydarzenia',
     ])
         ->setWidth(40)
     ->addTextarea('description', [
@@ -37,7 +34,6 @@ $offer
     ])
         ->addText('label', [
             'label' => 'Small label',
-            'default_value' => 'Pakiet',
         ])
             ->setWidth(25)
         ->addText('title', [

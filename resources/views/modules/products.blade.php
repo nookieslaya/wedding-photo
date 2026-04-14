@@ -1,13 +1,7 @@
 @php
     $sectionTitle = trim((string) ($module['section_title'] ?? ''));
-    $sectionTitle = $sectionTitle !== '' ? $sectionTitle : 'PRODUCTS';
-
     $sectionSubtitle = trim((string) ($module['section_subtitle'] ?? ''));
-    $sectionSubtitle = $sectionSubtitle !== '' ? $sectionSubtitle : '(PRODUKTY)';
-
     $heading = trim((string) ($module['heading'] ?? ''));
-    $heading = $heading !== '' ? $heading : 'Produkty i dodatki do Twojej historii';
-
     $description = trim((string) ($module['description'] ?? ''));
     $mainImage = $module['main_image'] ?? null;
 
@@ -23,12 +17,18 @@
             <div
                 class="grid grid-cols-1 gap-10 {{ $hasCards ? 'md:grid-cols-[32%_1fr] md:gap-14' : 'md:grid-cols-1 md:gap-0' }}">
                 <div class="md:sticky md:top-28 md:self-start">
-                    <p class="text-[0.75rem] uppercase tracking-[0.28em] text-black/58">{{ $sectionTitle }}</p>
-                    <p class="mt-2 text-[0.72rem] uppercase tracking-[0.16em] text-black/42">{{ $sectionSubtitle }}</p>
+                    @if ($sectionTitle !== '')
+                        <p class="text-[0.7rem] uppercase tracking-[0.24em] text-black/58 md:text-[0.74rem]">{{ $sectionTitle }}</p>
+                    @endif
+                    @if ($sectionSubtitle !== '')
+                        <p class="mt-2 text-[0.72rem] uppercase tracking-[0.16em] text-black/42">{{ $sectionSubtitle }}</p>
+                    @endif
 
-                    <h2 class="mt-7 text-[clamp(1.85rem,4.2vw,4rem)] font-semibold uppercase leading-[0.94] tracking-[0.01em]">
-                        {{ $heading }}
-                    </h2>
+                    @if ($heading !== '')
+                        <h2 class="mt-7 text-[clamp(1.65rem,3.1vw,3.15rem)] font-semibold uppercase leading-[0.94] tracking-[0.01em]">
+                            {{ $heading }}
+                        </h2>
+                    @endif
 
                     @if ($description !== '')
                         <p class="mt-6 max-w-[38ch] text-sm leading-relaxed text-black/68 md:text-base">
