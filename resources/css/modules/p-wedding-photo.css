@@ -1,0 +1,141 @@
+.p-wedding-photo .wedding-bg-base {
+  background:
+    radial-gradient(
+      ellipse at 42% 20%,
+      rgba(255, 255, 255, 0.065) 0%,
+      rgba(255, 255, 255, 0.02) 26%,
+      rgba(0, 0, 0, 0) 52%
+    ),
+    linear-gradient(
+      180deg,
+      rgba(0, 0, 0, 0.95) 0%,
+      rgba(0, 0, 0, 0.9) 44%,
+      rgba(0, 0, 0, 0.98) 100%
+    );
+}
+
+.p-wedding-photo .wedding-bg-sweep {
+  --sweep-angle: 112deg;
+  --sweep-opacity: 0.72;
+  --sweep-duration: 16s;
+  --sweep-delay: 0s;
+  --sweep-shift-start: -34%;
+  --sweep-shift-end: 34%;
+  background:
+    linear-gradient(
+      var(--sweep-angle),
+      rgba(255, 255, 255, 0) 0%,
+      rgba(255, 255, 255, 0.025) 42%,
+      rgba(255, 255, 255, 0.11) 50%,
+      rgba(255, 255, 255, 0.025) 58%,
+      rgba(255, 255, 255, 0) 100%
+    );
+  transform: translate3d(var(--sweep-shift-start), 0, 0);
+  opacity: var(--sweep-opacity);
+  mix-blend-mode: screen;
+  will-change: transform, opacity;
+  animation: weddingLightSweep var(--sweep-duration) cubic-bezier(0.45, 0.05, 0.55, 0.95) var(--sweep-delay) infinite;
+}
+
+.p-wedding-photo .wedding-bg-sweep--a {
+  --sweep-angle: 112deg;
+  --sweep-opacity: 0.7;
+  --sweep-duration: 15.5s;
+  --sweep-delay: 0s;
+  --sweep-shift-start: -36%;
+  --sweep-shift-end: 36%;
+}
+
+.p-wedding-photo .wedding-bg-sweep--b {
+  --sweep-angle: 96deg;
+  --sweep-opacity: 0.55;
+  --sweep-duration: 20s;
+  --sweep-delay: -5s;
+  --sweep-shift-start: -28%;
+  --sweep-shift-end: 40%;
+}
+
+.p-wedding-photo .wedding-bg-sweep--c {
+  --sweep-angle: 128deg;
+  --sweep-opacity: 0.48;
+  --sweep-duration: 23s;
+  --sweep-delay: -11s;
+  --sweep-shift-start: -42%;
+  --sweep-shift-end: 28%;
+}
+
+.p-wedding-photo .wedding-bg-sweep--d {
+  --sweep-angle: 135deg;
+  --sweep-opacity: 0.5;
+  --sweep-duration: 19s;
+  --sweep-delay: -8s;
+  --sweep-shift-start: -40%;
+  --sweep-shift-end: 40%;
+}
+
+.p-wedding-photo .wedding-bg-grain {
+  background-image:
+    repeating-radial-gradient(circle at 25% 28%, rgba(255, 255, 255, 0.08) 0 1px, rgba(255, 255, 255, 0) 1px 3px),
+    repeating-radial-gradient(circle at 72% 64%, rgba(255, 255, 255, 0.05) 0 1px, rgba(255, 255, 255, 0) 1px 3px),
+    repeating-radial-gradient(circle at 45% 76%, rgba(255, 255, 255, 0.04) 0 1px, rgba(255, 255, 255, 0) 1px 4px);
+  background-size: 220px 220px, 260px 260px, 300px 300px;
+  mix-blend-mode: soft-light;
+  opacity: 0.22;
+  animation: weddingFilmGrain 0.95s steps(3) infinite;
+  will-change: transform;
+}
+
+.p-wedding-photo .wedding-bg-vignette {
+  background: radial-gradient(
+    ellipse at 50% 46%,
+    rgba(0, 0, 0, 0) 0%,
+    rgba(0, 0, 0, 0.46) 58%,
+    rgba(0, 0, 0, 0.9) 100%
+  );
+}
+
+@keyframes weddingLightSweep {
+  0% {
+    transform: translate3d(var(--sweep-shift-start), 0, 0);
+    opacity: 0;
+  }
+  16% {
+    opacity: calc(var(--sweep-opacity) * 0.95);
+  }
+  50% {
+    transform: translate3d(0%, 0, 0);
+    opacity: var(--sweep-opacity);
+  }
+  84% {
+    opacity: calc(var(--sweep-opacity) * 0.95);
+  }
+  100% {
+    transform: translate3d(var(--sweep-shift-end), 0, 0);
+    opacity: 0;
+  }
+}
+
+@keyframes weddingFilmGrain {
+  0% {
+    transform: translate3d(0, 0, 0);
+  }
+  25% {
+    transform: translate3d(-2%, 1%, 0);
+  }
+  50% {
+    transform: translate3d(1.5%, -1.4%, 0);
+  }
+  75% {
+    transform: translate3d(1.2%, 1.3%, 0);
+  }
+  100% {
+    transform: translate3d(-1.1%, -1.2%, 0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .p-wedding-photo .wedding-bg-sweep,
+  .p-wedding-photo .wedding-bg-grain {
+    animation: none;
+  }
+}

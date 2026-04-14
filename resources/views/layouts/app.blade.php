@@ -19,6 +19,10 @@
 
       @include('sections.header')
 
+      <div class="pointer-events-none fixed right-3 top-1/2 z-[160] hidden -translate-y-1/2 md:flex" data-scroll-indicator aria-hidden="true">
+        <div class="flex h-[46svh] w-[14px] flex-col items-end justify-between" data-scroll-indicator-bars></div>
+      </div>
+
       <main id="main" class="main">
         @yield('content')
       </main>

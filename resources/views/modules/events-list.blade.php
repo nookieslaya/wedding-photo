@@ -26,7 +26,7 @@
                 @endif
             </header>
 
-            <div class="space-y-1.5 md:space-y-2">
+            <div class="space-y-4 md:space-y-6">
                 @foreach ($events as $event)
                     @php
                         $eventId = $event->ID;

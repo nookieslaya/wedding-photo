@@ -136,8 +136,8 @@ export const initSiteNavigationModule = () => {
     link.addEventListener('click', closeMobileNav);
 
     if (!prefersReducedMotion) {
-      link.addEventListener('mouseenter', () => runTextScramble(link, { duration: 650 }));
-      link.addEventListener('focus', () => runTextScramble(link, { duration: 650 }));
+      link.addEventListener('mouseenter', () => runTextScramble(link, { duration: 1100 }));
+      link.addEventListener('focus', () => runTextScramble(link, { duration: 1100 }));
     }
   });
 

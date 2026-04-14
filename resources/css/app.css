@@ -1,6 +1,34 @@
 @import "tailwindcss" theme(static);
 @import "./modules/events-hero.css";
 @import "./modules/events-sidebar-content.css";
+@import "./modules/contact-contact-form.css";
+@import "./modules/p-wedding-photo.css";
+@import "./modules/offer.css";
+@import "./modules/products.css";
 @source "../../app/**/*.php";
 @source "../**/*.blade.php";
 @source "../**/*.js";
+
+/* Keep native scrollbar for accessibility, but make it visually lighter. */
+html {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.72) rgba(255, 255, 255, 0.12);
+}
+
+html::-webkit-scrollbar {
+  width: 8px;
+}
+
+html::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.12);
+}
+
+html::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.72);
+  border-radius: 999px;
+  border: 1px solid rgba(0, 0, 0, 0.28);
+}
+
+html::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.9);
+}

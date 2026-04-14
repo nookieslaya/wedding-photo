@@ -1,0 +1,19 @@
+.products-module .products-card {
+  transition: border-color 240ms ease, background-color 240ms ease, transform 240ms ease;
+}
+
+.products-module .products-card:hover {
+  border-color: rgba(239, 68, 68, 0.42);
+  background-color: rgba(255, 255, 255, 0.72);
+  transform: translateY(-2px);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .products-module .products-card {
+    transition: none;
+  }
+
+  .products-module .products-card:hover {
+    transform: none;
+  }
+}

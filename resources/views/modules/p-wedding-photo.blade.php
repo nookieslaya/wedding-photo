@@ -8,10 +8,15 @@
     <section class="p-wedding-photo relative bg-black text-white" data-wedding-photo>
         <div class="sticky top-0 z-10 flex min-h-screen items-center overflow-hidden md:overflow-visible"
             data-wedding-sticky>
-            <div class="pointer-events-none absolute inset-0 z-0 bg-gradient-to-b from-black via-black/90 to-black">
+            <div class="pointer-events-none absolute inset-0 z-0 overflow-hidden" aria-hidden="true">
+                <div class="wedding-bg-base absolute inset-0"></div>
+                <div class="wedding-bg-sweep wedding-bg-sweep--a absolute inset-0"></div>
+                <div class="wedding-bg-sweep wedding-bg-sweep--b absolute inset-0"></div>
+                <div class="wedding-bg-sweep wedding-bg-sweep--c absolute inset-0"></div>
+                <div class="wedding-bg-sweep wedding-bg-sweep--d absolute inset-0"></div>
+                <div class="wedding-bg-grain absolute inset-0"></div>
+                <div class="wedding-bg-vignette absolute inset-0"></div>
             </div>
-            <canvas class="pointer-events-none absolute inset-0 z-[5] h-full w-full opacity-80 mix-blend-screen"
-                data-wedding-smoke></canvas>
 
             <div class="absolute inset-0 z-10 flex items-start justify-center px-6 pt-8 text-center md:px-10 md:pt-12 md:pb-12"
                 data-wedding-title-wrap>

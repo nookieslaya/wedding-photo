@@ -1,5 +1,5 @@
-<section class="events-list-module relative bg-[#d8d8da] py-8 text-black md:py-12" data-events-module>
-  <div class="mx-auto w-full max-w-[1800px] px-4 md:px-0">
+<section class="events-list-module relative bg-[#d8d8da] pb-8 pt-14 text-black md:pb-12 md:pt-24" data-events-module>
+  <div class="mx-auto w-full max-w-[1900px] px-4 md:px-8">
     <header class="mb-4 flex items-end gap-3 md:mb-6">
       <h1 class="text-lg font-semibold uppercase tracking-tight md:text-[1.75rem]">
         {{ __('Wydarzenia', 'sage') }}
@@ -7,7 +7,7 @@
     </header>
 
     @if (have_posts())
-      <div class="space-y-1.5 md:space-y-2">
+      <div class="space-y-4 md:space-y-6">
         @while (have_posts())
           <?php
           the_post();
