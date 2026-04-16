@@ -5,7 +5,7 @@ export const initEventsListModule = () => {
   const sections = document.querySelectorAll('[data-events-module]');
 
   sections.forEach((section) => {
-    const isMobile = window.matchMedia('(max-width: 767px)').matches;
+    const isMobile = window.matchMedia('(max-width: 1023px)').matches;
     const cards = section.querySelectorAll('[data-events-item]');
 
     cards.forEach((card) => {
@@ -28,12 +28,13 @@ export const initEventsListModule = () => {
         colorLayer.style.clipPath = `circle(${state.radius}px at ${state.x}px ${state.y}px)`;
       };
 
-      gsap.set(colorLayer, { autoAlpha: 1 });
-      applyReveal();
-
       if (isMobile || prefersReducedMotion) {
+        gsap.set(colorLayer, { clearProps: 'all' });
         return;
       }
+
+      gsap.set(colorLayer, { autoAlpha: 1 });
+      applyReveal();
 
       const updatePointer = (event) => {
         const rect = imageShell.getBoundingClientRect();

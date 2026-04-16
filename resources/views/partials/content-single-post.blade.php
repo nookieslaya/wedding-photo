@@ -4,6 +4,10 @@
     $postDate = get_the_date('Y.m.d', $postId);
     $categories = get_the_category($postId);
     $categoryLabel = !empty($categories) ? ($categories[0]->name ?? __('POST', 'sage')) : __('POST', 'sage');
+    $postTitle = html_entity_decode((string) $title, ENT_QUOTES | ENT_HTML5, 'UTF-8');
+    $postExcerpt = has_excerpt()
+        ? html_entity_decode((string) get_the_excerpt($postId), ENT_QUOTES | ENT_HTML5, 'UTF-8')
+        : '';
 
     $postsArchiveUrl = home_url('/posts');
 @endphp
@@ -28,12 +32,12 @@
             </div>
 
             <h1 class="mt-5 max-w-[18ch] text-[clamp(1.85rem,5.6vw,5rem)] font-semibold uppercase leading-[0.93] tracking-[0.01em]">
-                {!! $title !!}
+                {{ $postTitle }}
             </h1>
 
-            @if (has_excerpt())
+            @if ($postExcerpt !== '')
                 <p class="mt-6 max-w-[66ch] text-sm leading-relaxed text-white/76 md:text-[1rem]">
-                    {{ get_the_excerpt() }}
+                    {{ $postExcerpt }}
                 </p>
             @endif
 

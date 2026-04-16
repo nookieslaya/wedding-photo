@@ -27,7 +27,7 @@
 @endphp
 
 <section class="contact-contact-form-module relative bg-[#d8d8da] text-black">
-    <div class="mx-auto w-full max-w-[1900px] px-4 pb-10 pt-16 md:px-10 md:pb-16 md:pt-32">
+    <div class="mx-auto w-full max-w-[1900px] px-4 pb-10 pt-24 md:px-10 md:pb-16 md:pt-32">
         <div class="grid grid-cols-1 gap-10 md:grid-cols-[32%_1fr] md:gap-14">
             <aside class="md:sticky md:top-28 md:self-start">
                 <div class="max-w-[34rem] space-y-7 md:space-y-8">

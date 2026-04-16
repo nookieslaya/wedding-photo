@@ -197,13 +197,13 @@ export const initStoryStatementModule = () => {
 
     initializedStorySections.add(section);
 
-    const isMobile = window.matchMedia('(max-width: 767px)').matches;
+    const isMobile = window.matchMedia('(max-width: 1023px)').matches;
     const lineOne = section.querySelector('[data-story-line="1"]');
     const lineTwo = section.querySelector('[data-story-line="2"]');
     const description = section.querySelector('[data-story-description]');
     const smokeCanvas = section.querySelector('[data-story-smoke]');
 
-    if (!lineOne || !lineTwo || !description) {
+    if (!lineOne && !lineTwo && !description) {
       return;
     }
 
@@ -359,7 +359,7 @@ export const initStoryStatementModule = () => {
 
     initStoryCarousel(section, isMobile);
 
-    const items = [lineOne, lineTwo, description];
+    const items = [lineOne, lineTwo, description].filter(Boolean);
     const carousel = section.querySelector('[data-story-carousel]');
     if (carousel) {
       items.push(carousel);
@@ -380,14 +380,11 @@ export const initStoryStatementModule = () => {
           once: true,
           invalidateOnRefresh: true,
         },
-      })
-        .to(lineOne, { autoAlpha: 1, y: 0, duration: 0.75, ease: 'power3.out' }, 0)
-        .to(lineTwo, { autoAlpha: 1, y: 0, duration: 0.75, ease: 'power3.out' }, 0.16)
-        .to(description, { autoAlpha: 1, y: 0, duration: 0.75, ease: 'power3.out' }, 0.32);
+      });
 
-      if (carousel) {
-        mobileTimeline.to(carousel, { autoAlpha: 1, y: 0, duration: 0.75, ease: 'power3.out' }, 0.5);
-      }
+      items.forEach((item, index) => {
+        mobileTimeline.to(item, { autoAlpha: 1, y: 0, duration: 0.75, ease: 'power3.out' }, index * 0.16);
+      });
 
       return;
     }
@@ -402,13 +399,9 @@ export const initStoryStatementModule = () => {
       },
     });
 
-    timeline.to(lineOne, { autoAlpha: 1, y: 0, ease: 'power3.out' }, 0);
-    timeline.to(lineTwo, { autoAlpha: 1, y: 0, ease: 'power3.out' }, 0.45);
-    timeline.to(description, { autoAlpha: 1, y: 0, ease: 'power3.out' }, 0.9);
-
-    if (carousel) {
-      timeline.to(carousel, { autoAlpha: 1, y: 0, ease: 'power3.out' }, 1.25);
-    }
+    items.forEach((item, index) => {
+      timeline.to(item, { autoAlpha: 1, y: 0, ease: 'power3.out' }, index * 0.4);
+    });
   });
 
   ScrollTrigger.refresh();

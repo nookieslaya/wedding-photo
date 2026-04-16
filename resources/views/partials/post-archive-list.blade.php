@@ -25,9 +25,11 @@
                         $postId = get_the_ID();
                         $imageId = get_post_thumbnail_id($postId);
                         $postDate = get_the_date('Y.m.d', $postId);
-                        $postTitle = get_the_title($postId);
+                        $postTitle = html_entity_decode((string) get_the_title($postId), ENT_QUOTES | ENT_HTML5, 'UTF-8');
                         $postLink = get_permalink($postId);
-                        $postExcerpt = trim((string) get_the_excerpt($postId));
+                        $postExcerpt = trim(
+                            html_entity_decode((string) get_the_excerpt($postId), ENT_QUOTES | ENT_HTML5, 'UTF-8'),
+                        );
                         $categories = get_the_category($postId);
                         $categoryLabel = !empty($categories) ? ($categories[0]->name ?? __('POST', 'sage')) : __('POST', 'sage');
                     @endphp

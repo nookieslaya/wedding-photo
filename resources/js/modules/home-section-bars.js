@@ -7,7 +7,7 @@ export const initHomeSectionBarsModule = () => {
     return;
   }
 
-  const desktopQuery = window.matchMedia('(min-width: 768px)');
+  const desktopQuery = window.matchMedia('(min-width: 1024px)');
   const sections = document.querySelectorAll('#main section');
   const instances = [];
 

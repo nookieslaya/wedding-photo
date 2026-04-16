@@ -12,7 +12,7 @@ export const initFooterEffectsModule = () => {
   const barsContainer = footer.querySelector('[data-footer-bars]');
   const navLinks = footer.querySelectorAll('[data-footer-link]');
   const animatedLinks = footer.querySelectorAll('[data-footer-anim-link]');
-  const desktopQuery = window.matchMedia('(min-width: 768px)');
+  const desktopQuery = window.matchMedia('(min-width: 1024px)');
   let bars = [];
 
   const lockLinkWidths = () => {

@@ -16,7 +16,7 @@
             </div>
         </div>
 
-        <div class="relative z-10 mx-auto w-full max-w-[1900px] px-4 py-16 md:px-10 md:pt-32 md:pb-24">
+        <div class="relative z-10 mx-auto w-full max-w-[1900px] px-4 pb-16 pt-24 md:px-10 md:pt-32 md:pb-24">
             <div class="grid grid-cols-1 gap-10 md:grid-cols-[30%_1fr] md:gap-14">
                 <div class="md:sticky md:top-28 md:self-start" data-offer-left>
                     @if ($sectionTitle !== '')
@@ -59,7 +59,7 @@
                                 <div class="flex flex-wrap items-start justify-between gap-4">
                                     <div>
                                         <p class="text-[0.66rem] uppercase tracking-[0.2em] text-white/45">
-                                            {{ str_pad((string) ($index + 1), 2, '0', STR_PAD_LEFT) }} · {{ $label }}
+                                            {{ $label }}
                                         </p>
                                         <h3
                                             class="mt-2 text-[clamp(1.15rem,2.2vw,2.1rem)] font-semibold uppercase leading-[1.05] tracking-[0.01em]"

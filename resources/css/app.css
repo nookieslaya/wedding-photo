@@ -6,6 +6,11 @@
 @import "./modules/offer.css";
 @import "./modules/products.css";
 @import "./modules/availability-calendar.css";
+
+@theme {
+  --breakpoint-md: 64rem;
+}
+
 @source "../../app/**/*.php";
 @source "../**/*.blade.php";
 @source "../**/*.js";
@@ -32,4 +37,14 @@ html::-webkit-scrollbar-thumb {
 
 html::-webkit-scrollbar-thumb:hover {
   background: rgba(255, 255, 255, 0.9);
+}
+
+.story-statement-module [data-story-line] {
+  font-size: var(--story-title-size-mobile, clamp(2.2rem, 9vw, 8rem));
+}
+
+@media (min-width: 1024px) {
+  .story-statement-module [data-story-line] {
+    font-size: var(--story-title-size-desktop, clamp(2.2rem, 9vw, 8rem));
+  }
 }

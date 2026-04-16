@@ -11,12 +11,26 @@ $storyStatement = new FieldsBuilder('story-statement', [
 $storyStatement
     ->addText('title_line_one', [
         'label' => 'Title line one',
-        'required' => 1,
     ])
         ->setWidth(50)
     ->addText('title_line_two', [
         'label' => 'Title line two',
-        'required' => 1,
+    ])
+        ->setWidth(50)
+    ->addNumber('title_font_size_mobile', [
+        'label' => 'Title font size (mobile, rem)',
+        'instructions' => 'Optional. Example: 2.2',
+        'step' => 0.1,
+        'min' => 1,
+        'max' => 12,
+    ])
+        ->setWidth(50)
+    ->addNumber('title_font_size_desktop', [
+        'label' => 'Title font size (desktop, rem)',
+        'instructions' => 'Optional. Example: 8',
+        'step' => 0.1,
+        'min' => 1,
+        'max' => 20,
     ])
         ->setWidth(50)
     ->addTextarea('description', [
@@ -29,14 +43,13 @@ $storyStatement
         'instructions' => 'Add images for the story carousel (desktop: 3 visible).',
         'layout' => 'row',
         'button_label' => 'Add image',
-        'min' => 3,
+        'min' => 0,
     ])
         ->setWidth(100)
         ->addImage('image', [
             'label' => 'Image',
             'return_format' => 'array',
             'preview_size' => 'medium',
-            'required' => 1,
         ])
         ->endRepeater();
 

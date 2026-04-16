@@ -8,7 +8,7 @@ export const initScrollIndicatorModule = () => {
     return;
   }
 
-  const desktopQuery = window.matchMedia('(min-width: 768px)');
+  const desktopQuery = window.matchMedia('(min-width: 1024px)');
   let bars = [];
   let rafId = null;
   const baseWidth = 4;

@@ -13,7 +13,7 @@
 @endphp
 
 @if (!empty($events))
-    <section class="events-list-module relative bg-[#d8d8da] py-8 text-black md:pt-32 md:pb-12" data-events-module>
+    <section class="events-list-module relative bg-[#d8d8da] pb-8 pt-24 text-black md:pt-32 md:pb-12" data-events-module>
         <div class="mx-auto w-full max-w-[1900px] px-4 md:px-8">
             <header class="mb-4 flex items-end gap-3  md:mb-6">
                 <h2 class="text-lg font-semibold uppercase tracking-medium md:text-[2.75rem]">
@@ -32,7 +32,7 @@
                         $eventId = $event->ID;
                         $imageId = get_post_thumbnail_id($eventId);
                         $eventDate = get_the_date('Y.m.d', $eventId);
-                        $eventTitle = get_the_title($eventId);
+                        $eventTitle = html_entity_decode((string) get_the_title($eventId), ENT_QUOTES | ENT_HTML5, 'UTF-8');
                         $eventLink = get_permalink($eventId);
                         $eventTerms = get_the_terms($eventId, 'event_category');
                         if (!$eventTerms || is_wp_error($eventTerms)) {
@@ -42,7 +42,7 @@
                             !empty($eventTerms) && !is_wp_error($eventTerms) ? $eventTerms[0]->name : 'EVENT';
                     @endphp
 
-                    <article class="overflow-hidden rounded-[4px] bg-[#ececee] p-2 md:max-h-[470px] md:p-0"
+                    <article class="overflow-hidden rounded-[4px] bg-[#ececee] p-2 md:h-[470px] md:max-h-[470px] md:p-0"
                         data-events-item>
                         <a href="{{ $eventLink }}"
                             class="grid gap-3 no-underline hover:no-underline focus:no-underline md:h-full md:grid-cols-[44%_56%] md:items-stretch md:gap-0"
@@ -51,10 +51,10 @@
                                 @if ($imageId)
                                     <div class="relative h-full w-full md:min-h-[11.5rem]" data-events-image-shell>
                                         {!! wp_get_attachment_image($imageId, 'large', false, [
-                                            'class' => 'h-full w-full object-cover grayscale',
+                                            'class' => 'h-full w-full object-cover md:grayscale',
                                         ]) !!}
                                         {!! wp_get_attachment_image($imageId, 'large', false, [
-                                            'class' => 'pointer-events-none absolute inset-0 h-full w-full object-cover',
+                                            'class' => 'pointer-events-none absolute inset-0 hidden h-full w-full object-cover md:block',
                                             'data-events-image-color' => '1',
                                         ]) !!}
                                     </div>
@@ -79,7 +79,7 @@
                                     </div>
                                 </div>
 
-                                <h3 class="mt-4 text-[1.08rem] font-light leading-[1.35] tracking-medium normal-case no-underline md:mt-3 md:text-[1.5rem] xl:text-[1.82rem]"
+                                <h3 class="mt-4 line-clamp-3 text-[1.08rem] font-light leading-[1.35] tracking-medium normal-case no-underline md:mt-3 md:text-[1.5rem] xl:text-[1.82rem]"
                                     style="text-decoration:none !important;" data-events-title>
                                     {{ $eventTitle }}
                                 </h3>

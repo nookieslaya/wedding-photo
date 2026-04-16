@@ -59,7 +59,7 @@ export const initWeddingPhotoModule = () => {
       return;
     }
 
-    const isMobile = () => window.matchMedia('(max-width: 767px)').matches;
+    const isMobile = () => window.matchMedia('(max-width: 1023px)').matches;
 
     if (prefersReducedMotion) {
       gsap.set(section, { clearProps: 'minHeight' });

@@ -26,7 +26,7 @@ export const initHeroModule = () => {
       return;
     }
 
-    const isMobileViewport = () => window.matchMedia('(max-width: 767px)').matches;
+    const isMobileViewport = () => window.matchMedia('(max-width: 1023px)').matches;
     const imageShift = () => {
       const mediaHeight = media.getBoundingClientRect().height;
       const imageHeight = image.getBoundingClientRect().height;

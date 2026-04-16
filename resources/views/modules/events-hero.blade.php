@@ -5,9 +5,9 @@
     $overrideImage = $module['hero_image'] ?? null;
     $imageId = !empty($overrideImage['ID']) ? $overrideImage['ID'] : $featuredImageId;
 
-    $title = trim((string) ($module['override_title'] ?? ''));
+    $title = html_entity_decode(trim((string) ($module['override_title'] ?? '')), ENT_QUOTES | ENT_HTML5, 'UTF-8');
     if ($title === '' && $postId) {
-        $title = get_the_title($postId);
+        $title = html_entity_decode((string) get_the_title($postId), ENT_QUOTES | ENT_HTML5, 'UTF-8');
     }
 
     $dateLabel = trim((string) ($module['override_date'] ?? ''));

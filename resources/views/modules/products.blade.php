@@ -13,7 +13,7 @@
     <section class="products-module relative bg-[#d8d8da] text-black {{ $hasCards ? '' : 'min-h-[100svh]' }}"
         data-products-module>
         <div
-            class="mx-auto w-full max-w-[1900px] px-4 {{ $hasCards ? 'py-16 md:px-10 md:pt-32 md:pb-24' : 'flex min-h-[100svh] items-center py-16 md:px-10 md:pt-32 md:pb-24' }}">
+            class="mx-auto w-full max-w-[1900px] px-4 {{ $hasCards ? 'pb-16 pt-24 md:px-10 md:pt-32 md:pb-24' : 'flex min-h-[100svh] items-center pb-16 pt-24 md:px-10 md:pt-32 md:pb-24' }}">
             <div
                 class="grid grid-cols-1 gap-10 {{ $hasCards ? 'md:grid-cols-[32%_1fr] md:gap-14' : 'md:grid-cols-1 md:gap-0' }}">
                 <div class="md:sticky md:top-28 md:self-start">

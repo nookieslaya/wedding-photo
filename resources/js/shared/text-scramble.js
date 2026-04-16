@@ -5,6 +5,8 @@ const DIGIT_CHARS = '0123456789';
 // Single place to tune animation speed globally.
 export const TEXT_SCRAMBLE_SETTINGS = {
   duration: 1000,
+  disableOnMobile: true,
+  mobileBreakpoint: 1023,
 };
 
 const rafMap = new WeakMap();
@@ -43,6 +45,16 @@ export const runTextScramble = (element, options = {}) => {
   stopTextScramble(element);
 
   const chars = Array.from(original);
+  const isMobile =
+    typeof window !== 'undefined'
+    && window.matchMedia(`(max-width: ${TEXT_SCRAMBLE_SETTINGS.mobileBreakpoint}px)`).matches;
+  const disableForViewport = options.disableOnMobile ?? TEXT_SCRAMBLE_SETTINGS.disableOnMobile;
+
+  if (disableForViewport && isMobile) {
+    element.textContent = original;
+    return;
+  }
+
   const start = performance.now();
   const duration = options.duration ?? TEXT_SCRAMBLE_SETTINGS.duration;
 

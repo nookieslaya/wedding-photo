@@ -14,7 +14,7 @@ export const initSiteNavigationModule = () => {
   const links = header.querySelectorAll('[data-nav-link]');
   const desktopNav = header.querySelector('[data-desktop-nav]');
   const barsContainer = header.querySelector('[data-nav-bars]');
-  const desktopQuery = window.matchMedia('(min-width: 768px)');
+  const desktopQuery = window.matchMedia('(min-width: 1024px)');
   let bars = [];
 
   const resetBars = () => {
@@ -136,8 +136,13 @@ export const initSiteNavigationModule = () => {
     link.addEventListener('click', closeMobileNav);
 
     if (!prefersReducedMotion) {
-      link.addEventListener('mouseenter', () => runTextScramble(link, { duration: 1100 }));
-      link.addEventListener('focus', () => runTextScramble(link, { duration: 1100 }));
+      link.addEventListener('mouseenter', () => runTextScramble(link, { duration: 550 }));
+      link.addEventListener('focus', () => {
+        if (!link.matches(':focus-visible')) {
+          return;
+        }
+        runTextScramble(link, { duration: 550 });
+      });
     }
   });
 
@@ -175,7 +180,7 @@ export const initSiteNavigationModule = () => {
     lockDesktopLinkWidths();
     buildBars();
     resetBars();
-    if (window.matchMedia('(min-width: 768px)').matches) {
+    if (window.matchMedia('(min-width: 1024px)').matches) {
       closeMobileNav();
     }
   });
