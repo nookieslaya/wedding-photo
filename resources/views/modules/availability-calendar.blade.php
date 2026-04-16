@@ -1,4 +1,8 @@
 @php
+    if (function_exists('\App\animated_cleanup_expired_booking_holds')) {
+        \App\animated_cleanup_expired_booking_holds(20);
+    }
+
     $sectionTitle = trim((string) ($module['section_title'] ?? ''));
     $sectionSubtitle = trim((string) ($module['section_subtitle'] ?? ''));
     $heading = trim((string) ($module['heading'] ?? ''));
@@ -12,6 +16,9 @@
     $startMonthOffset = max(-12, min(12, $startMonthOffset));
 
     $ctaButton = $module['cta_button'] ?? null;
+    $moduleIndex = isset($moduleIndex) && is_numeric($moduleIndex) ? (int) $moduleIndex : 0;
+    $postId = get_the_ID();
+    $moduleId = 'availability-' . $postId . '-' . $moduleIndex;
 
     $rangesRaw = $module['date_ranges'] ?? [];
     $rangesRaw = is_array($rangesRaw) ? $rangesRaw : [];
@@ -61,6 +68,53 @@
             'note' => $note,
         ];
     }
+
+    $bookingHoldNoticeText = trim((string) ($module['booking_hold_notice_text'] ?? ''));
+    if ($bookingHoldNoticeText === '') {
+        $bookingHoldNoticeText = 'Rezerwacja terminu jest wstępna i trwa {hours}h. Po tym czasie termin wraca do puli wolnych, jeśli nie zostanie potwierdzony.';
+    }
+    $bookingHoldNoticeText = str_replace('{hours}', '48', $bookingHoldNoticeText);
+
+    $bookingSuccessMessage = trim((string) ($module['booking_success_message'] ?? ''));
+    if ($bookingSuccessMessage === '') {
+        $bookingSuccessMessage = 'Dziękuję. Twoje zgłoszenie zostało zapisane. Termin jest zablokowany na 48h.';
+    }
+
+    $bookingErrorMessage = trim((string) ($module['booking_error_message'] ?? ''));
+    if ($bookingErrorMessage === '') {
+        $bookingErrorMessage = 'Nie udało się wysłać zgłoszenia. Sprawdź dane i spróbuj ponownie.';
+    }
+
+    $bookingFormHeading = trim((string) ($module['booking_form_heading'] ?? ''));
+    if ($bookingFormHeading === '') {
+        $bookingFormHeading = 'Zarezerwuj termin';
+    }
+
+    $bookingFormSubmitLabel = trim((string) ($module['booking_form_submit_label'] ?? ''));
+    if ($bookingFormSubmitLabel === '') {
+        $bookingFormSubmitLabel = 'Wyślij rezerwację';
+    }
+
+    $bookingConsentLabel = trim((string) ($module['booking_consent_label'] ?? ''));
+    if ($bookingConsentLabel === '') {
+        $bookingConsentLabel = 'Zapoznałam/em się z moim stylem pracy i akceptuję kontakt zwrotny.';
+    }
+
+    $bookingOptionsRaw = $module['booking_options'] ?? [];
+    $bookingOptionsRaw = is_array($bookingOptionsRaw) ? $bookingOptionsRaw : [];
+    $bookingOptions = [];
+    foreach ($bookingOptionsRaw as $optionRow) {
+        $optionLabel = trim((string) ($optionRow['label'] ?? ''));
+        if ($optionLabel === '') {
+            continue;
+        }
+        $bookingOptions[] = $optionLabel;
+    }
+
+    $bookingResultModule = trim((string) request()->query('booking_module', ''));
+    $bookingResult = trim((string) request()->query('booking_request', ''));
+    $bookingResultMessage = trim((string) request()->query('booking_message', ''));
+    $showBookingResult = $bookingResultModule === $moduleId && in_array($bookingResult, ['success', 'error'], true);
 @endphp
 
 <section class="availability-calendar-module relative bg-black text-white" data-availability-calendar-module>
@@ -116,6 +170,7 @@
 
             <div class="availability-calendar-shell rounded-[4px] border border-white/12 bg-white/[0.03] p-4 md:p-6"
                 data-availability-calendar
+                data-availability-module-id="{{ $moduleId }}"
                 data-availability-ranges='@json($ranges)'
                 data-availability-map='@json($statusMap)'
                 data-availability-months="{{ $monthsToShow }}"
@@ -144,6 +199,89 @@
                 <p class="mt-4 min-h-5 text-[0.72rem] uppercase tracking-[0.1em] text-white/62" data-availability-note>
                     Kliknij dzień, aby zobaczyć status.
                 </p>
+
+                @if ($showBookingResult)
+                    <div
+                        class="mt-4 rounded-sm border px-3 py-2 text-sm {{ $bookingResult === 'success' ? 'border-[#22c55e]/60 bg-[#22c55e]/10 text-white/90' : 'border-[#ef4444]/60 bg-[#ef4444]/10 text-white/90' }}">
+                        {{ $bookingResultMessage !== '' ? $bookingResultMessage : ($bookingResult === 'success' ? $bookingSuccessMessage : $bookingErrorMessage) }}
+                    </div>
+                @endif
+
+                <div class="availability-booking-panel mt-5 rounded-sm border border-white/14 bg-black/35 p-4 md:p-5"
+                    data-availability-booking-panel hidden>
+                    <h4 class="text-sm font-semibold uppercase tracking-[0.16em] text-white/90">{{ $bookingFormHeading }}</h4>
+                    <p class="mt-2 text-xs leading-relaxed text-white/72">{{ $bookingHoldNoticeText }}</p>
+
+                    @if (!empty($bookingOptions))
+                        <div class="availability-booking-cta mt-4" data-availability-booking-cta>
+                            <button type="button" class="availability-booking-open" data-availability-booking-open>
+                                Zarezerwuj
+                            </button>
+                        </div>
+
+                        <form class="mt-4 grid grid-cols-1 gap-3 md:gap-4"
+                            method="post"
+                            action="{{ esc_url(admin_url('admin-post.php')) }}"
+                            data-availability-booking-form
+                            hidden>
+                            <input type="hidden" name="action" value="animated_submit_booking_request">
+                            <input type="hidden" name="booking_post_id" value="{{ $postId }}">
+                            <input type="hidden" name="booking_module_index" value="{{ $moduleIndex }}">
+                            <input type="hidden" name="booking_module_id" value="{{ $moduleId }}">
+                            <input type="hidden" name="booking_honeypot" value="">
+                            @php(wp_nonce_field('animated_submit_booking_request', 'booking_nonce'))
+
+                            <label class="availability-booking-field">
+                                <span>Data wydarzenia *</span>
+                                <input type="text" name="booking_date_display" value="" readonly data-availability-booking-date-display>
+                                <input type="hidden" name="booking_date" value="" data-availability-booking-date>
+                            </label>
+
+                            <label class="availability-booking-field">
+                                <span>Imię i nazwisko *</span>
+                                <input type="text" name="booking_full_name" required maxlength="120" autocomplete="name">
+                            </label>
+
+                            <label class="availability-booking-field">
+                                <span>Usługa / Pakiet *</span>
+                                <select name="booking_option" required>
+                                    <option value="">Wybierz</option>
+                                    @foreach ($bookingOptions as $optionLabel)
+                                        <option value="{{ $optionLabel }}">{{ $optionLabel }}</option>
+                                    @endforeach
+                                </select>
+                            </label>
+
+                            <label class="availability-booking-field">
+                                <span>Adres e-mail *</span>
+                                <input type="email" name="booking_email" required maxlength="190" autocomplete="email">
+                            </label>
+
+                            <label class="availability-booking-field">
+                                <span>Numer telefonu *</span>
+                                <input type="tel" name="booking_phone" required maxlength="50" autocomplete="tel">
+                            </label>
+
+                            <label class="availability-booking-field">
+                                <span>Wiadomość</span>
+                                <textarea name="booking_message" rows="4" maxlength="1500"></textarea>
+                            </label>
+
+                            <label class="availability-booking-consent">
+                                <input type="checkbox" name="booking_consent" value="1" required>
+                                <span>{{ $bookingConsentLabel }} *</span>
+                            </label>
+
+                            <button type="submit" class="availability-booking-submit">
+                                {{ $bookingFormSubmitLabel }}
+                            </button>
+                        </form>
+                    @else
+                        <p class="mt-4 text-sm text-white/70">
+                            Uzupełnij opcje „Usługa / Pakiet” w ustawieniach modułu, aby włączyć formularz rezerwacji.
+                        </p>
+                    @endif
+                </div>
             </div>
         </div>
     </div>

@@ -7,7 +7,7 @@
         @php($layout = $module['acf_fc_layout'] ?? null)
 
         @if ($layout)
-          @includeIf("modules.{$layout}", ['module' => $module])
+          @includeIf("modules.{$layout}", ['module' => $module, 'moduleIndex' => $loop->index])
         @endif
       @endforeach
     @else

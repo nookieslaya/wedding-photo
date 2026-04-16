@@ -11,6 +11,7 @@ export const initAvailabilityCalendarModule = () => {
   const modules = document.querySelectorAll('[data-availability-calendar]');
 
   modules.forEach((calendar) => {
+    const moduleId = (calendar.dataset.availabilityModuleId || '').trim();
     const rangesRaw = calendar.dataset.availabilityRanges;
     const statusMapRaw = calendar.dataset.availabilityMap;
     const monthsRaw = Number(calendar.dataset.availabilityMonths || 12);
@@ -38,9 +39,27 @@ export const initAvailabilityCalendarModule = () => {
     const note = calendar.querySelector('[data-availability-note]');
     const prevButton = calendar.querySelector('[data-availability-prev]');
     const nextButton = calendar.querySelector('[data-availability-next]');
+    const bookingPanel = calendar.querySelector('[data-availability-booking-panel]');
+    const bookingCta = calendar.querySelector('[data-availability-booking-cta]');
+    const bookingOpenButton = calendar.querySelector('[data-availability-booking-open]');
+    const bookingForm = calendar.querySelector('[data-availability-booking-form]');
+    const bookingDateInput = calendar.querySelector('[data-availability-booking-date]');
+    const bookingDateDisplay = calendar.querySelector('[data-availability-booking-date-display]');
 
     if (!monthLabel || !weekdays || !daysGrid || !note || !prevButton || !nextButton) {
       return;
+    }
+
+    if (moduleId !== '') {
+      const url = new URL(window.location.href);
+      const bookingModule = (url.searchParams.get('booking_module') || '').trim();
+      const bookingState = (url.searchParams.get('booking_request') || '').trim();
+      if (bookingModule === moduleId && bookingState !== '') {
+        url.searchParams.delete('booking_module');
+        url.searchParams.delete('booking_request');
+        url.searchParams.delete('booking_message');
+        window.history.replaceState({}, document.title, url.toString());
+      }
     }
 
     const baseDate = new Date();
@@ -61,6 +80,48 @@ export const initAvailabilityCalendarModule = () => {
     const monthNameFormatter = new Intl.DateTimeFormat('pl-PL', {
       month: 'long',
       year: 'numeric',
+    });
+    const dateFormatter = new Intl.DateTimeFormat('pl-PL', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
+    });
+
+    const updateBookingPanel = (dayData, dayDate) => {
+      if (!bookingPanel || !bookingDateInput || !bookingDateDisplay) {
+        return;
+      }
+
+      if (dayData?.status !== 'available' || !dayDate) {
+        bookingPanel.hidden = true;
+        if (bookingCta) {
+          bookingCta.hidden = true;
+        }
+        if (bookingForm) {
+          bookingForm.hidden = true;
+        }
+        bookingDateInput.value = '';
+        bookingDateDisplay.value = '';
+        return;
+      }
+
+      bookingPanel.hidden = false;
+      if (bookingCta) {
+        bookingCta.hidden = false;
+      }
+      if (bookingForm) {
+        bookingForm.hidden = true;
+      }
+      bookingDateInput.value = toDateKey(dayDate);
+      bookingDateDisplay.value = dateFormatter.format(dayDate);
+    };
+
+    bookingOpenButton?.addEventListener('click', () => {
+      if (!bookingForm) {
+        return;
+      }
+      bookingForm.hidden = false;
+      bookingOpenButton.blur();
     });
 
     const renderMonth = () => {
@@ -105,6 +166,7 @@ export const initAvailabilityCalendarModule = () => {
         firstDay.click();
       } else {
         note.textContent = 'Brak danych dla wybranego miesiąca.';
+        updateBookingPanel(null, null);
       }
     };
 
@@ -135,6 +197,8 @@ export const initAvailabilityCalendarModule = () => {
       note.textContent = dayData.note
         ? `${humanDate}: ${STATUS_LABEL[dayStatus] || STATUS_LABEL.none} · ${dayData.note}`
         : `${humanDate}: ${STATUS_LABEL[dayStatus] || STATUS_LABEL.none}`;
+
+      updateBookingPanel(dayData, dayDate);
     });
 
     prevButton.addEventListener('click', () => {

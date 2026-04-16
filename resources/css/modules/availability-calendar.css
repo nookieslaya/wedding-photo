@@ -53,6 +53,85 @@
   cursor: default;
 }
 
+.availability-calendar-module .availability-booking-field {
+  display: grid;
+  gap: 0.45rem;
+}
+
+.availability-calendar-module .availability-booking-field span {
+  font-size: 0.68rem;
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  color: rgba(255, 255, 255, 0.78);
+}
+
+.availability-calendar-module .availability-booking-field input,
+.availability-calendar-module .availability-booking-field select,
+.availability-calendar-module .availability-booking-field textarea {
+  width: 100%;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  background: rgba(255, 255, 255, 0.03);
+  color: rgba(255, 255, 255, 0.92);
+  font-size: 0.92rem;
+  line-height: 1.4;
+  padding: 0.64rem 0.72rem;
+}
+
+.availability-calendar-module .availability-booking-field textarea {
+  resize: vertical;
+  min-height: 7.2rem;
+}
+
+.availability-calendar-module .availability-booking-consent {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+  font-size: 0.82rem;
+  line-height: 1.45;
+  color: rgba(255, 255, 255, 0.8);
+}
+
+.availability-calendar-module .availability-booking-consent input {
+  margin-top: 0.15rem;
+}
+
+.availability-calendar-module .availability-booking-submit {
+  border: 1px solid rgba(255, 255, 255, 0.26);
+  background: rgba(255, 255, 255, 0.04);
+  color: rgba(255, 255, 255, 0.94);
+  min-height: 2.8rem;
+  font-size: 0.72rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.16em;
+  transition: border-color 180ms ease, color 180ms ease, background-color 180ms ease;
+}
+
+.availability-calendar-module .availability-booking-submit:hover {
+  border-color: rgba(239, 68, 68, 0.86);
+  color: #ef4444;
+  background: rgba(239, 68, 68, 0.08);
+}
+
+.availability-calendar-module .availability-booking-open {
+  border: 1px solid rgba(255, 255, 255, 0.26);
+  background: rgba(255, 255, 255, 0.04);
+  color: rgba(255, 255, 255, 0.94);
+  min-height: 2.7rem;
+  min-width: 12rem;
+  padding: 0 1rem;
+  font-size: 0.72rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.16em;
+  transition: border-color 180ms ease, color 180ms ease, background-color 180ms ease;
+}
+
+.availability-calendar-module .availability-booking-open:hover {
+  border-color: rgba(255, 255, 255, 0.62);
+  background: rgba(255, 255, 255, 0.1);
+}
+
 @media (prefers-reduced-motion: reduce) {
   .availability-calendar-module .availability-day {
     transition: none;

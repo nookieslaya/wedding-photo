@@ -48,6 +48,66 @@ $availabilityCalendar
         'return_format' => 'array',
     ])
         ->setWidth(50)
+    ->addEmail('booking_notification_email', [
+        'label' => 'Booking notification email',
+        'instructions' => 'Optional. If empty, admin email will be used.',
+    ])
+        ->setWidth(50)
+    ->addTextarea('booking_hold_notice_text', [
+        'label' => 'Booking 48h notice text',
+        'instructions' => 'Visible above the booking form. You can use {hours} placeholder.',
+        'rows' => 2,
+        'default_value' => 'Rezerwacja terminu jest wstępna i trwa {hours}h. Po tym czasie termin wraca do puli wolnych, jeśli nie zostanie potwierdzony.',
+    ])
+        ->setWidth(100)
+    ->addTextarea('booking_hold_note_template', [
+        'label' => 'Calendar hold note template',
+        'instructions' => 'Used in day note for tentative hold. Placeholders: {hours}, {expires}.',
+        'rows' => 2,
+        'default_value' => 'Wstępna rezerwacja na {hours}h (do {expires}).',
+    ])
+        ->setWidth(100)
+    ->addTextarea('booking_success_message', [
+        'label' => 'Booking success message',
+        'rows' => 2,
+        'default_value' => 'Dziękuję. Twoje zgłoszenie zostało zapisane. Termin jest zablokowany na 48h.',
+    ])
+        ->setWidth(100)
+    ->addTextarea('booking_error_message', [
+        'label' => 'Booking error message',
+        'rows' => 2,
+        'default_value' => 'Nie udało się wysłać zgłoszenia. Sprawdź dane i spróbuj ponownie.',
+    ])
+        ->setWidth(100)
+    ->addText('booking_form_heading', [
+        'label' => 'Booking form heading',
+        'default_value' => 'Zarezerwuj termin',
+    ])
+        ->setWidth(40)
+    ->addText('booking_form_submit_label', [
+        'label' => 'Booking submit button label',
+        'default_value' => 'Wyślij rezerwację',
+    ])
+        ->setWidth(30)
+    ->addText('booking_consent_label', [
+        'label' => 'Booking consent label',
+        'default_value' => 'Zapoznałam/em się z moim stylem pracy i akceptuję kontakt zwrotny.',
+    ])
+        ->setWidth(30)
+    ->addRepeater('booking_options', [
+        'label' => 'Service / Package options',
+        'instructions' => 'Options shown in booking form select field.',
+        'layout' => 'row',
+        'button_label' => 'Add option',
+        'min' => 1,
+    ])
+        ->setWidth(100)
+        ->addText('label', [
+            'label' => 'Option label',
+            'required' => 1,
+        ])
+            ->setWidth(100)
+    ->endRepeater()
     ->addTextarea('calendar_status_map', [
         'label' => 'Calendar status map',
         'instructions' => 'Managed by the visual calendar tool below. Leave empty if not used.',
