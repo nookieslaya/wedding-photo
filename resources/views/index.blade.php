@@ -4,26 +4,6 @@
   @if (is_post_type_archive('event') || request()->path() === 'wydarzenia')
     @include('partials.event-archive-list')
   @else
-    @include('partials.page-header')
-
-    @if (! have_posts())
-      <x-alert type="warning">
-        {!! __('Sorry, no results were found.', 'sage') !!}
-      </x-alert>
-
-      {!! get_search_form(false) !!}
-    @endif
-
-    @while(have_posts()) @php(the_post())
-      @includeFirst(['partials.content-' . get_post_type(), 'partials.content'])
-    @endwhile
-
-    {!! get_the_posts_navigation() !!}
-  @endif
-@endsection
-
-@section('sidebar')
-  @if (! (is_post_type_archive('event') || request()->path() === 'wydarzenia'))
-    @include('sections.sidebar')
+    @include('partials.post-archive-list')
   @endif
 @endsection

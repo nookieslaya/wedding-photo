@@ -1,4 +1,4 @@
-<section class="events-list-module relative bg-[#d8d8da] pb-8 pt-14 text-black md:pb-12 md:pt-24" data-events-module>
+<section class="events-list-module relative bg-[#d8d8da] pb-8 pt-14 text-black md:pb-12 md:pt-32" data-events-module>
   <div class="mx-auto w-full max-w-[1900px] px-4 md:px-8">
     <header class="mb-4 flex items-end gap-3 md:mb-6">
       <h1 class="text-[clamp(1.65rem,3.1vw,3.15rem)] font-semibold uppercase leading-[0.94] tracking-[0.01em]">

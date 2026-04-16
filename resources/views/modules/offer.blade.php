@@ -16,7 +16,7 @@
             </div>
         </div>
 
-        <div class="relative z-10 mx-auto w-full max-w-[1900px] px-4 py-16 md:px-10 md:py-24">
+        <div class="relative z-10 mx-auto w-full max-w-[1900px] px-4 py-16 md:px-10 md:pt-32 md:pb-24">
             <div class="grid grid-cols-1 gap-10 md:grid-cols-[30%_1fr] md:gap-14">
                 <div class="md:sticky md:top-28 md:self-start" data-offer-left>
                     @if ($sectionTitle !== '')

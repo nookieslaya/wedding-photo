@@ -84,10 +84,14 @@
                             $imageWidth = $image['width'] ?? null;
                             $imageHeight = $image['height'] ?? null;
                             $isLandscape = $imageWidth && $imageHeight ? $imageWidth >= $imageHeight : true;
-                            $sizeClass = $isLandscape ? 'md:w-[50%]' : 'md:w-[34%]';
+                            $sizeClass = $isLandscape
+                                ? 'md:w-[70%] lg:w-[60%] xl:w-[50%]'
+                                : 'md:w-[50%] lg:w-[42%] xl:w-[34%]';
                             $desktopAlign = $index % 2 === 0 ? 'md:justify-self-start' : 'md:justify-self-end';
                             $desktopWidth = $sizeClass . ' ' . $desktopAlign;
-                            $imageMaxHeight = $isLandscape ? 'md:max-h-[52svh]' : 'md:max-h-[68svh]';
+                            $imageFrameHeight = $isLandscape
+                                ? 'h-[44svh] md:h-[68svh] lg:h-[62svh] xl:h-[52svh]'
+                                : 'h-[56svh] md:h-[84svh] lg:h-[76svh] xl:h-[68svh]';
                             $desktopSpacingVariants = ['md:mt-0', 'md:mt-2', 'md:mt-4', 'md:mt-1'];
                             $desktopSpacingClass = $desktopSpacingVariants[$index % count($desktopSpacingVariants)];
                         @endphp
@@ -95,13 +99,13 @@
                         @if (!empty($image['ID']))
                             <figure class="group w-full md:w-auto {{ $desktopWidth }} {{ $desktopSpacingClass }}"
                                 data-wedding-item>
-                                <div class="relative overflow-hidden rounded-sm" data-wedding-image-shell>
+                                <div class="relative overflow-hidden rounded-sm {{ $imageFrameHeight }}" data-wedding-image-shell>
                                     {!! wp_get_attachment_image($image['ID'], 'large', false, [
-                                        'class' => 'h-auto w-full object-contain grayscale ' . $imageMaxHeight,
+                                        'class' => 'h-full w-full object-cover grayscale',
                                     ]) !!}
 
                                     {!! wp_get_attachment_image($image['ID'], 'large', false, [
-                                        'class' => 'pointer-events-none absolute inset-0 h-full w-full object-contain ' . $imageMaxHeight,
+                                        'class' => 'pointer-events-none absolute inset-0 h-full w-full object-cover',
                                         'data-wedding-image-color' => '1',
                                     ]) !!}
                                 </div>

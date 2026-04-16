@@ -81,10 +81,10 @@
     <div class="pointer-events-auto hidden md:block">
         <div class="fixed inset-x-0 top-0 border-b border-white/15 bg-black/78 px-6 py-6 text-white backdrop-blur-md">
             <div class="mx-auto flex w-full max-w-[1800px] items-center justify-between gap-8">
-                <a class="inline-flex min-w-[10rem] items-center justify-start text-left text-sm font-semibold uppercase tracking-[0.12em] text-white no-underline"
+                <a class="inline-flex min-w-[10rem] items-center justify-start text-left text-base font-semibold uppercase tracking-[0.12em] text-white no-underline"
                     style="text-decoration:none !important;" href="{{ home_url('/') }}" aria-label="Home">
                     @if (!empty($brandLogo['ID']))
-                        {!! wp_get_attachment_image($brandLogo['ID'], 'medium', false, ['class' => 'max-h-12 w-auto object-contain']) !!}
+                        {!! wp_get_attachment_image($brandLogo['ID'], 'medium', false, ['class' => 'h-6 w-auto object-contain']) !!}
                     @else
                         {{ $brandText }}
                     @endif

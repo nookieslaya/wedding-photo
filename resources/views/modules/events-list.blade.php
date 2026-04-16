@@ -13,7 +13,7 @@
 @endphp
 
 @if (!empty($events))
-    <section class="events-list-module relative bg-[#d8d8da] py-8 text-black md:py-12" data-events-module>
+    <section class="events-list-module relative bg-[#d8d8da] py-8 text-black md:pt-32 md:pb-12" data-events-module>
         <div class="mx-auto w-full max-w-[1900px] px-4 md:px-8">
             <header class="mb-4 flex items-end gap-3  md:mb-6">
                 <h2 class="text-lg font-semibold uppercase tracking-medium md:text-[2.75rem]">
