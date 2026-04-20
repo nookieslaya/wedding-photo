@@ -106,6 +106,14 @@ export const normalizeStatusMap = (raw) => {
     if (value && typeof value === 'object') {
       const status = value.status;
       const note = typeof value.note === 'string' ? value.note.trim() : '';
+      const holdExpiresAtRaw = value.hold_expires_at;
+      const holdExpiresAt = Number.isFinite(Number(holdExpiresAtRaw)) ? Number(holdExpiresAtRaw) : 0;
+
+      if (status === 'tentative' && holdExpiresAt > 0 && holdExpiresAt <= Math.floor(Date.now() / 1000)) {
+        map[key] = { status: 'available', note: '' };
+        return;
+      }
+
       if (Object.prototype.hasOwnProperty.call(STATUS_PRIORITY, status)) {
         map[key] = { status, note };
       }

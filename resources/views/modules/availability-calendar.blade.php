@@ -19,6 +19,11 @@
     $moduleIndex = isset($moduleIndex) && is_numeric($moduleIndex) ? (int) $moduleIndex : 0;
     $postId = get_the_ID();
     $moduleId = 'availability-' . $postId . '-' . $moduleIndex;
+    $bookingHoldMinutesRaw = $module['booking_hold_minutes'] ?? 2880;
+    $bookingHoldMinutes = is_numeric($bookingHoldMinutesRaw) ? (int) $bookingHoldMinutesRaw : 2880;
+    $bookingHoldMinutes = max(1, min(10080, $bookingHoldMinutes));
+    $bookingHoldHours = round($bookingHoldMinutes / 60, 2);
+    $bookingHoldHoursLabel = rtrim(rtrim(number_format($bookingHoldHours, 2, '.', ''), '0'), '.');
 
     $rangesRaw = $module['date_ranges'] ?? [];
     $rangesRaw = is_array($rangesRaw) ? $rangesRaw : [];
@@ -63,22 +68,36 @@
             continue;
         }
 
-        $statusMap[$dayKey] = [
+        $statusEntry = [
             'status' => $status,
             'note' => $note,
         ];
+        if (is_array($dayValue) && isset($dayValue['hold_expires_at']) && is_numeric($dayValue['hold_expires_at'])) {
+            $statusEntry['hold_expires_at'] = (int) $dayValue['hold_expires_at'];
+        }
+
+        $statusMap[$dayKey] = $statusEntry;
     }
 
     $bookingHoldNoticeText = trim((string) ($module['booking_hold_notice_text'] ?? ''));
     if ($bookingHoldNoticeText === '') {
-        $bookingHoldNoticeText = 'Rezerwacja terminu jest wstępna i trwa {hours}h. Po tym czasie termin wraca do puli wolnych, jeśli nie zostanie potwierdzony.';
+        $bookingHoldNoticeText = 'Rezerwacja terminu jest wstępna i trwa {hours}h ({minutes} min). Po tym czasie termin wraca do puli wolnych, jeśli nie zostanie potwierdzony.';
     }
-    $bookingHoldNoticeText = str_replace('{hours}', '48', $bookingHoldNoticeText);
+    $bookingHoldNoticeText = str_replace(
+        ['{hours}', '{minutes}'],
+        [$bookingHoldHoursLabel, (string) $bookingHoldMinutes],
+        $bookingHoldNoticeText,
+    );
 
     $bookingSuccessMessage = trim((string) ($module['booking_success_message'] ?? ''));
     if ($bookingSuccessMessage === '') {
-        $bookingSuccessMessage = 'Dziękuję. Twoje zgłoszenie zostało zapisane. Termin jest zablokowany na 48h.';
+        $bookingSuccessMessage = 'Dziękuję. Twoje zgłoszenie zostało zapisane. Termin jest zablokowany na {hours}h.';
     }
+    $bookingSuccessMessage = str_replace(
+        ['{hours}', '{minutes}'],
+        [$bookingHoldHoursLabel, (string) $bookingHoldMinutes],
+        $bookingSuccessMessage,
+    );
 
     $bookingErrorMessage = trim((string) ($module['booking_error_message'] ?? ''));
     if ($bookingErrorMessage === '') {

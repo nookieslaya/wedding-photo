@@ -171,13 +171,17 @@
                                     $socialTitle = trim((string) ($item['title'] ?? ''));
                                     $socialUrl = $item['url']['url'] ?? null;
                                     $socialTarget = $item['url']['target'] ?? '_self';
+                                    $socialSignature = trim((string) ($item['url']['title'] ?? ''));
+                                    if ($socialSignature === '' && is_string($socialUrl)) {
+                                        $socialSignature = (string) (parse_url($socialUrl, PHP_URL_HOST) ?: $socialUrl);
+                                    }
                                 @endphp
                                 @if ($socialTitle !== '' && $socialUrl)
                                     <a href="{{ $socialUrl }}" target="{{ $socialTarget }}"
                                         class="border-b border-white/22 pb-3 text-sm text-white/85 no-underline transition hover:text-white"
                                         style="text-decoration:none !important;" data-footer-anim-link>
                                         <span class="text-white/52">{{ $socialTitle }}:</span>
-                                        <span class="ml-3">{{ parse_url($socialUrl, PHP_URL_HOST) ?: $socialUrl }}</span>
+                                        <span class="ml-3">{{ $socialSignature }}</span>
                                         <span class="ml-2 inline-flex text-white/45" aria-hidden="true">
                                             <svg class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none">
                                                 <path d="M7 7h10v10M17 7L7 17" stroke="currentColor"

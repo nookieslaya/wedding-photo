@@ -282,7 +282,7 @@ add_action('init', function () {
 });
 
 /**
- * Schedule cleanup for expired 48h holds.
+ * Schedule cleanup for expired tentative holds.
  *
  * @return void
  */
@@ -295,6 +295,10 @@ add_action('init', function () {
 add_action('animated_booking_hold_cleanup', function () {
     animated_cleanup_expired_booking_holds();
 });
+
+add_action('init', function () {
+    animated_maybe_cleanup_expired_booking_holds();
+}, 30);
 
 add_action('admin_post_nopriv_animated_submit_booking_request', __NAMESPACE__.'\\animated_handle_booking_request_submit');
 add_action('admin_post_animated_submit_booking_request', __NAMESPACE__.'\\animated_handle_booking_request_submit');
@@ -343,7 +347,7 @@ add_action('manage_booking_request_posts_custom_column', function ($column, $pos
     if ($column === 'abr_status') {
         $status = (string) get_post_meta($postId, '_abr_status', true);
         $label = match ($status) {
-            'hold_48h' => 'Hold 48h',
+            'hold_48h' => 'Hold aktywny',
             'expired' => 'Wygasło',
             'approved' => 'Zatwierdzone',
             'rejected' => 'Odrzucone',
@@ -401,6 +405,41 @@ function animated_decode_status_map($raw): array
 }
 
 /**
+ * Return availability module row by post/module index.
+ */
+function animated_get_availability_module(int $postId, int $moduleIndex): ?array
+{
+    if (! function_exists('get_field')) {
+        return null;
+    }
+
+    $modules = get_field('flexible_modules', $postId);
+    if (! is_array($modules) || ! isset($modules[$moduleIndex]) || ! is_array($modules[$moduleIndex])) {
+        return null;
+    }
+
+    $module = $modules[$moduleIndex];
+    if (($module['acf_fc_layout'] ?? '') !== 'availability-calendar') {
+        return null;
+    }
+
+    return $module;
+}
+
+/**
+ * Fill template placeholders for booking messages.
+ */
+function animated_booking_replace_tokens(string $template, array $context): string
+{
+    $pairs = [];
+    foreach ($context as $key => $value) {
+        $pairs['{'.$key.'}'] = (string) $value;
+    }
+
+    return strtr($template, $pairs);
+}
+
+/**
  * Resolve day status for date key from module map + ranges.
  */
 function animated_resolve_module_day_status(array $module, string $dateKey): array
@@ -421,6 +460,12 @@ function animated_resolve_module_day_status(array $module, string $dateKey): arr
     if (is_array($mapped)) {
         $status = trim((string) ($mapped['status'] ?? ''));
         $note = trim((string) ($mapped['note'] ?? ''));
+        $holdExpiresAt = isset($mapped['hold_expires_at']) ? (int) $mapped['hold_expires_at'] : 0;
+
+        if ($status === 'tentative' && $holdExpiresAt > 0 && $holdExpiresAt <= time()) {
+            return ['status' => 'available', 'note' => ''];
+        }
+
         if (isset($priority[$status])) {
             return ['status' => $status, 'note' => $note];
         }
@@ -534,10 +579,18 @@ function animated_cleanup_expired_booking_holds(int $limit = 100): void
         $postId = (int) get_post_meta($requestId, '_abr_post_id', true);
         $moduleIndex = (int) get_post_meta($requestId, '_abr_module_index', true);
         $dateKey = trim((string) get_post_meta($requestId, '_abr_date', true));
+        $holdExpiresAt = (int) get_post_meta($requestId, '_abr_hold_expires_at', true);
+        $holdMinutes = (int) get_post_meta($requestId, '_abr_hold_minutes', true);
+        $holdMinutes = max(1, min(10080, $holdMinutes > 0 ? $holdMinutes : 2880));
+        $holdHours = round($holdMinutes / 60, 2);
+        $holdHoursLabel = rtrim(rtrim(number_format($holdHours, 2, '.', ''), '0'), '.');
+
         if ($postId <= 0 || $dateKey === '') {
             update_post_meta($requestId, '_abr_status', 'expired');
             continue;
         }
+
+        $module = animated_get_availability_module($postId, $moduleIndex);
 
         if (function_exists('get_field') && function_exists('update_field')) {
             $modules = get_field('flexible_modules', $postId);
@@ -556,8 +609,60 @@ function animated_cleanup_expired_booking_holds(int $limit = 100): void
             }
         }
 
+        $sendExpiredEmailRaw = $module['booking_send_expired_email'] ?? 1;
+        $sendExpiredEmail = ! in_array($sendExpiredEmailRaw, [0, '0', false, 'false'], true);
+        $clientEmail = sanitize_email((string) get_post_meta($requestId, '_abr_email', true));
+        if ($sendExpiredEmail && is_email($clientEmail)) {
+            $fullName = sanitize_text_field((string) get_post_meta($requestId, '_abr_full_name', true));
+            $option = sanitize_text_field((string) get_post_meta($requestId, '_abr_option', true));
+            $siteName = get_bloginfo('name');
+            $expiresHuman = $holdExpiresAt > 0 ? wp_date('d.m.Y H:i', $holdExpiresAt) : wp_date('d.m.Y H:i');
+
+            $subjectTemplate = trim((string) ($module['booking_client_expired_email_subject'] ?? ''));
+            if ($subjectTemplate === '') {
+                $subjectTemplate = 'Wstępna rezerwacja wygasła';
+            }
+            $bodyTemplate = trim((string) ($module['booking_client_expired_email_body'] ?? ''));
+            if ($bodyTemplate === '') {
+                $bodyTemplate = "Cześć {full_name},\n\nWstępna rezerwacja terminu wygasła (brak potwierdzenia).\nData: {date}\nUsługa / Pakiet: {option}\nCzas holda: {hours}h ({minutes} min)\nWygasła: {expires}\n\nJeśli termin jest nadal aktualny, wyślij nowe zapytanie.\n\n{site_name}";
+            }
+
+            $tokenContext = [
+                'full_name' => $fullName,
+                'date' => $dateKey,
+                'option' => $option,
+                'hours' => $holdHoursLabel,
+                'minutes' => (string) $holdMinutes,
+                'expires' => $expiresHuman,
+                'site_name' => $siteName,
+            ];
+
+            $subject = animated_booking_replace_tokens($subjectTemplate, $tokenContext);
+            $body = animated_booking_replace_tokens($bodyTemplate, $tokenContext);
+            wp_mail($clientEmail, $subject, $body);
+        }
+
         update_post_meta($requestId, '_abr_status', 'expired');
     }
+}
+
+/**
+ * Opportunistic cleanup fallback when WP Cron is not reliably triggered.
+ *
+ * @return void
+ */
+function animated_maybe_cleanup_expired_booking_holds(): void
+{
+    $cacheKey = 'animated_booking_cleanup_last_run';
+    $now = time();
+    $lastRun = (int) get_transient($cacheKey);
+
+    if ($lastRun > 0 && ($now - $lastRun) < (10 * MINUTE_IN_SECONDS)) {
+        return;
+    }
+
+    set_transient($cacheKey, $now, 15 * MINUTE_IN_SECONDS);
+    animated_cleanup_expired_booking_holds(40);
 }
 
 /**
@@ -643,8 +748,12 @@ function animated_handle_booking_request_submit(): void
         $redirectWith('error', __('Ten termin nie jest już dostępny do rezerwacji.', 'sage'));
     }
 
-    $holdHours = 48;
-    $holdExpiresAt = time() + ($holdHours * HOUR_IN_SECONDS);
+    $holdMinutesRaw = $module['booking_hold_minutes'] ?? 2880;
+    $holdMinutes = is_numeric($holdMinutesRaw) ? (int) $holdMinutesRaw : 2880;
+    $holdMinutes = max(1, min(10080, $holdMinutes));
+    $holdHours = round($holdMinutes / 60, 2);
+    $holdHoursLabel = rtrim(rtrim(number_format($holdHours, 2, '.', ''), '0'), '.');
+    $holdExpiresAt = time() + ($holdMinutes * MINUTE_IN_SECONDS);
     $holdExpiresHuman = wp_date('d.m.Y H:i', $holdExpiresAt);
 
     $requestTitle = sprintf('%s — %s — %s', $dateKey, $fullName, $option);
@@ -661,6 +770,7 @@ function animated_handle_booking_request_submit(): void
 
     update_post_meta($requestId, '_abr_status', 'hold_48h');
     update_post_meta($requestId, '_abr_hold_expires_at', $holdExpiresAt);
+    update_post_meta($requestId, '_abr_hold_minutes', $holdMinutes);
     update_post_meta($requestId, '_abr_post_id', $postId);
     update_post_meta($requestId, '_abr_module_index', $moduleIndex);
     update_post_meta($requestId, '_abr_date', $dateKey);
@@ -672,9 +782,13 @@ function animated_handle_booking_request_submit(): void
 
     $holdTemplate = sanitize_text_field((string) ($module['booking_hold_note_template'] ?? ''));
     if ($holdTemplate === '') {
-        $holdTemplate = 'Wstępna rezerwacja na {hours}h (do {expires}).';
+        $holdTemplate = 'Wstępna rezerwacja na {hours}h ({minutes} min), do {expires}.';
     }
-    $holdNote = str_replace(['{hours}', '{expires}'], [(string) $holdHours, $holdExpiresHuman], $holdTemplate);
+    $holdNote = str_replace(
+        ['{hours}', '{minutes}', '{expires}'],
+        [$holdHoursLabel, (string) $holdMinutes, $holdExpiresHuman],
+        $holdTemplate,
+    );
 
     $updated = animated_update_module_day_status($postId, $moduleIndex, $dateKey, [
         'status' => 'tentative',
@@ -714,23 +828,40 @@ function animated_handle_booking_request_submit(): void
 
     wp_mail($notifyEmail, $adminSubject, $adminBody);
 
-    $clientSubject = 'Potwierdzenie przyjęcia zapytania o termin';
-    $clientBody = implode("\n", [
-        'Dziękuję za zapytanie.',
-        'Twój termin został wstępnie zablokowany na 48h.',
-        '',
-        'Data: '.$dateKey,
-        'Usługa / Pakiet: '.$option,
-        'Hold do: '.$holdExpiresHuman,
-        '',
-        'Skontaktuję się z Tobą, aby potwierdzić szczegóły.',
-    ]);
-    wp_mail($email, $clientSubject, $clientBody);
+    $sendInitialEmailRaw = $module['booking_send_initial_email'] ?? 1;
+    $sendInitialEmail = ! in_array($sendInitialEmailRaw, [0, '0', false, 'false'], true);
+    if ($sendInitialEmail && is_email($email)) {
+        $clientSubjectTemplate = trim((string) ($module['booking_client_initial_email_subject'] ?? ''));
+        if ($clientSubjectTemplate === '') {
+            $clientSubjectTemplate = 'Potwierdzenie wstępnej rezerwacji terminu';
+        }
+        $clientBodyTemplate = trim((string) ($module['booking_client_initial_email_body'] ?? ''));
+        if ($clientBodyTemplate === '') {
+            $clientBodyTemplate = "Dziękuję za zapytanie.\n\nTwój termin został wstępnie zablokowany na {hours}h ({minutes} min).\nData: {date}\nUsługa / Pakiet: {option}\nHold do: {expires}\n\nSkontaktuję się z Tobą, aby potwierdzić szczegóły.\n\n{site_name}";
+        }
+        $clientTokenContext = [
+            'full_name' => $fullName,
+            'date' => $dateKey,
+            'option' => $option,
+            'hours' => $holdHoursLabel,
+            'minutes' => (string) $holdMinutes,
+            'expires' => $holdExpiresHuman,
+            'site_name' => get_bloginfo('name'),
+        ];
+        $clientSubject = animated_booking_replace_tokens($clientSubjectTemplate, $clientTokenContext);
+        $clientBody = animated_booking_replace_tokens($clientBodyTemplate, $clientTokenContext);
+        wp_mail($email, $clientSubject, $clientBody);
+    }
 
     $successMessage = trim((string) ($module['booking_success_message'] ?? ''));
     if ($successMessage === '') {
-        $successMessage = 'Dziękuję. Twoje zgłoszenie zostało zapisane. Termin jest zablokowany na 48h.';
+        $successMessage = 'Dziękuję. Twoje zgłoszenie zostało zapisane. Termin jest zablokowany na {hours}h.';
     }
+    $successMessage = str_replace(
+        ['{hours}', '{minutes}'],
+        [$holdHoursLabel, (string) $holdMinutes],
+        $successMessage,
+    );
 
     $redirectWith('success', $successMessage);
 }

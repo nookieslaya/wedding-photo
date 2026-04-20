@@ -53,18 +53,27 @@ $availabilityCalendar
         'instructions' => 'Optional. If empty, admin email will be used.',
     ])
         ->setWidth(50)
+    ->addNumber('booking_hold_minutes', [
+        'label' => 'Booking hold duration (minutes)',
+        'instructions' => 'How long tentative reservation should be held before auto-release.',
+        'default_value' => 2880,
+        'min' => 1,
+        'max' => 10080,
+        'step' => 1,
+    ])
+        ->setWidth(50)
     ->addTextarea('booking_hold_notice_text', [
-        'label' => 'Booking 48h notice text',
-        'instructions' => 'Visible above the booking form. You can use {hours} placeholder.',
+        'label' => 'Booking hold notice text',
+        'instructions' => 'Visible above the booking form. You can use {hours} and {minutes} placeholders.',
         'rows' => 2,
-        'default_value' => 'Rezerwacja terminu jest wstępna i trwa {hours}h. Po tym czasie termin wraca do puli wolnych, jeśli nie zostanie potwierdzony.',
+        'default_value' => 'Rezerwacja terminu jest wstępna i trwa {hours}h ({minutes} min). Po tym czasie termin wraca do puli wolnych, jeśli nie zostanie potwierdzony.',
     ])
         ->setWidth(100)
     ->addTextarea('booking_hold_note_template', [
         'label' => 'Calendar hold note template',
-        'instructions' => 'Used in day note for tentative hold. Placeholders: {hours}, {expires}.',
+        'instructions' => 'Used in day note for tentative hold. Placeholders: {hours}, {minutes}, {expires}.',
         'rows' => 2,
-        'default_value' => 'Wstępna rezerwacja na {hours}h (do {expires}).',
+        'default_value' => 'Wstępna rezerwacja na {hours}h ({minutes} min), do {expires}.',
     ])
         ->setWidth(100)
     ->addTextarea('booking_success_message', [
@@ -79,6 +88,42 @@ $availabilityCalendar
         'default_value' => 'Nie udało się wysłać zgłoszenia. Sprawdź dane i spróbuj ponownie.',
     ])
         ->setWidth(100)
+    ->addTrueFalse('booking_send_initial_email', [
+        'label' => 'Send client email after booking',
+        'default_value' => 1,
+        'ui' => 1,
+    ])
+        ->setWidth(50)
+    ->addTrueFalse('booking_send_expired_email', [
+        'label' => 'Send client email when hold expires',
+        'default_value' => 1,
+        'ui' => 1,
+    ])
+        ->setWidth(50)
+    ->addText('booking_client_initial_email_subject', [
+        'label' => 'Client email subject (after booking)',
+        'default_value' => 'Potwierdzenie wstępnej rezerwacji terminu',
+    ])
+        ->setWidth(50)
+    ->addTextarea('booking_client_initial_email_body', [
+        'label' => 'Client email body (after booking)',
+        'instructions' => 'Placeholders: {full_name}, {date}, {option}, {hours}, {minutes}, {expires}, {site_name}.',
+        'rows' => 6,
+        'default_value' => "Dziękuję za zapytanie.\n\nTwój termin został wstępnie zablokowany na {hours}h ({minutes} min).\nData: {date}\nUsługa / Pakiet: {option}\nHold do: {expires}\n\nSkontaktuję się z Tobą, aby potwierdzić szczegóły.\n\n{site_name}",
+    ])
+        ->setWidth(50)
+    ->addText('booking_client_expired_email_subject', [
+        'label' => 'Client email subject (hold expired)',
+        'default_value' => 'Wstępna rezerwacja wygasła',
+    ])
+        ->setWidth(50)
+    ->addTextarea('booking_client_expired_email_body', [
+        'label' => 'Client email body (hold expired)',
+        'instructions' => 'Placeholders: {full_name}, {date}, {option}, {hours}, {minutes}, {expires}, {site_name}.',
+        'rows' => 6,
+        'default_value' => "Cześć {full_name},\n\nWstępna rezerwacja terminu wygasła (brak potwierdzenia).\nData: {date}\nUsługa / Pakiet: {option}\nCzas holda: {hours}h ({minutes} min)\nWygasła: {expires}\n\nJeśli termin jest nadal aktualny, wyślij nowe zapytanie.\n\n{site_name}",
+    ])
+        ->setWidth(50)
     ->addText('booking_form_heading', [
         'label' => 'Booking form heading',
         'default_value' => 'Zarezerwuj termin',
