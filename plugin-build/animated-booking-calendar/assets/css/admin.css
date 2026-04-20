@@ -1,0 +1,58 @@
+.abc-admin-ui {
+  border: 1px solid #d6d8dd;
+  border-radius: 6px;
+  background: #fff;
+  padding: 14px;
+}
+
+.abc-admin-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 10px;
+}
+
+.abc-admin-tools { display: grid; gap: 10px; margin-bottom: 12px; }
+.abc-admin-statuses { display: flex; flex-wrap: wrap; gap: 8px; }
+.abc-admin-statuses .button.is-selected { background: #111827; border-color: #111827; color: #fff; }
+
+.abc-admin-tools input[data-note] {
+  width: 100%;
+  min-height: 36px;
+  border: 1px solid #ccd0d4;
+  border-radius: 4px;
+  padding: 0 10px;
+}
+
+.abc-admin-actions { display:flex; flex-wrap:wrap; gap:8px; }
+
+.abc-admin-weekdays, .abc-admin-days {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 6px;
+}
+
+.abc-admin-weekdays {
+  margin-bottom: 6px;
+  font-size: 11px;
+  text-transform: uppercase;
+  color: #6b7280;
+  text-align: center;
+}
+
+.abc-admin-day {
+  min-height: 34px;
+  border: 1px solid #d1d5db;
+  border-radius: 4px;
+  background: #f9fafb;
+  cursor: pointer;
+}
+
+.abc-admin-day.is-muted { opacity: .35; cursor: default; }
+.abc-admin-day.is-none { background: #f9fafb; }
+.abc-admin-day.is-available { border-color: #86efac; background: #dcfce7; }
+.abc-admin-day.is-tentative { border-color: #fcd34d; background: #fef3c7; }
+.abc-admin-day.is-booked { border-color: #fca5a5; background: #fee2e2; }
+.abc-admin-day.is-picked { outline: 2px solid #111827; outline-offset: -2px; }
+
+.abc-admin-summary { margin: 10px 0 0; font-size: 12px; color: #374151; }
