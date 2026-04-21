@@ -19,6 +19,18 @@
     $moduleIndex = isset($moduleIndex) && is_numeric($moduleIndex) ? (int) $moduleIndex : 0;
     $postId = get_the_ID();
     $moduleId = 'availability-' . $postId . '-' . $moduleIndex;
+    $themePreset = trim((string) ($module['theme_preset'] ?? 'dark'));
+    if (!in_array($themePreset, ['dark', 'graphite', 'smoke'], true)) {
+        $themePreset = 'dark';
+    }
+    $backgroundStyle = trim((string) ($module['background_style'] ?? 'gradient'));
+    if (!in_array($backgroundStyle, ['gradient', 'plain', 'mesh'], true)) {
+        $backgroundStyle = 'gradient';
+    }
+    $fontPreset = trim((string) ($module['font_preset'] ?? 'modern'));
+    if (!in_array($fontPreset, ['modern', 'editorial', 'mono'], true)) {
+        $fontPreset = 'modern';
+    }
     $bookingHoldMinutesRaw = $module['booking_hold_minutes'] ?? 2880;
     $bookingHoldMinutes = is_numeric($bookingHoldMinutesRaw) ? (int) $bookingHoldMinutesRaw : 2880;
     $bookingHoldMinutes = max(1, min(10080, $bookingHoldMinutes));
@@ -130,13 +142,45 @@
         $bookingOptions[] = $optionLabel;
     }
 
+    $defaultTimeSlotsRaw = preg_split('/\r\n|\r|\n/', (string) ($module['booking_default_time_slots'] ?? '')) ?: [];
+    $defaultTimeSlots = [];
+    foreach ($defaultTimeSlotsRaw as $slotLine) {
+        $slot = trim((string) $slotLine);
+        if ($slot !== '' && preg_match('/^(?:[01]\d|2[0-3]):[0-5]\d$/', $slot)) {
+            $defaultTimeSlots[] = $slot;
+        }
+    }
+    $defaultTimeSlots = array_values(array_unique($defaultTimeSlots));
+    sort($defaultTimeSlots);
+
+    $timeOverridesRaw = trim((string) ($module['calendar_time_slots_overrides'] ?? '{}'));
+    $timeOverridesDecoded = json_decode($timeOverridesRaw !== '' ? $timeOverridesRaw : '{}', true);
+    $timeOverridesDecoded = is_array($timeOverridesDecoded) ? $timeOverridesDecoded : [];
+
+    $timeReservationsRaw = trim((string) ($module['calendar_time_slots_reservations'] ?? '{}'));
+    $timeReservationsDecoded = json_decode($timeReservationsRaw !== '' ? $timeReservationsRaw : '{}', true);
+    $timeReservationsDecoded = is_array($timeReservationsDecoded) ? $timeReservationsDecoded : [];
+    if (function_exists('\App\animated_collect_live_time_reservations')) {
+        $liveReservations = \App\animated_collect_live_time_reservations((int) $postId, (int) $moduleIndex);
+        if (is_array($liveReservations)) {
+            foreach ($liveReservations as $dateKey => $slotsMap) {
+                if (!is_array($slotsMap)) {
+                    continue;
+                }
+                foreach ($slotsMap as $slotKey => $slotEntry) {
+                    $timeReservationsDecoded[$dateKey][$slotKey] = $slotEntry;
+                }
+            }
+        }
+    }
+
     $bookingResultModule = trim((string) request()->query('booking_module', ''));
     $bookingResult = trim((string) request()->query('booking_request', ''));
     $bookingResultMessage = trim((string) request()->query('booking_message', ''));
     $showBookingResult = $bookingResultModule === $moduleId && in_array($bookingResult, ['success', 'error'], true);
 @endphp
 
-<section class="availability-calendar-module relative bg-black text-white" data-availability-calendar-module>
+<section class="availability-calendar-module availability-theme-{{ $themePreset }} availability-bg-{{ $backgroundStyle }} availability-font-{{ $fontPreset }} relative text-white" data-availability-calendar-module>
     <div class="mx-auto w-full max-w-[1900px] px-4 pb-16 pt-24 md:px-10 md:pt-32 md:pb-24">
         <div class="grid grid-cols-1 gap-10 md:grid-cols-[32%_1fr] md:gap-14">
             <aside class="md:sticky md:top-28 md:self-start">
@@ -192,6 +236,9 @@
                 data-availability-module-id="{{ $moduleId }}"
                 data-availability-ranges='@json($ranges)'
                 data-availability-map='@json($statusMap)'
+                data-availability-time-default='@json($defaultTimeSlots)'
+                data-availability-time-overrides='@json($timeOverridesDecoded)'
+                data-availability-time-reservations='@json($timeReservationsDecoded)'
                 data-availability-months="{{ $monthsToShow }}"
                 data-availability-offset="{{ $startMonthOffset }}">
                 <div class="flex items-center justify-between gap-3 border-b border-white/12 pb-4">
@@ -254,6 +301,13 @@
                                 <span>Data wydarzenia *</span>
                                 <input type="text" name="booking_date_display" value="" readonly data-availability-booking-date-display>
                                 <input type="hidden" name="booking_date" value="" data-availability-booking-date>
+                            </label>
+
+                            <label class="availability-booking-field">
+                                <span>Godzina *</span>
+                                <select name="booking_time" required data-availability-booking-time>
+                                    <option value="">Wybierz godzinę</option>
+                                </select>
                             </label>
 
                             <label class="availability-booking-field">

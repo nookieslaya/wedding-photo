@@ -17,6 +17,42 @@ $availabilityCalendar
         'label' => 'Section subtitle',
     ])
         ->setWidth(30)
+    ->addSelect('theme_preset', [
+        'label' => 'Theme preset',
+        'choices' => [
+            'dark' => 'Dark',
+            'graphite' => 'Graphite',
+            'smoke' => 'Smoke',
+        ],
+        'default_value' => 'dark',
+        'allow_null' => 0,
+        'ui' => 1,
+    ])
+        ->setWidth(20)
+    ->addSelect('background_style', [
+        'label' => 'Background style',
+        'choices' => [
+            'gradient' => 'Gradient',
+            'plain' => 'Plain',
+            'mesh' => 'Mesh',
+        ],
+        'default_value' => 'gradient',
+        'allow_null' => 0,
+        'ui' => 1,
+    ])
+        ->setWidth(20)
+    ->addSelect('font_preset', [
+        'label' => 'Font preset',
+        'choices' => [
+            'modern' => 'Modern',
+            'editorial' => 'Editorial',
+            'mono' => 'Mono',
+        ],
+        'default_value' => 'modern',
+        'allow_null' => 0,
+        'ui' => 1,
+    ])
+        ->setWidth(20)
     ->addText('heading', [
         'label' => 'Heading',
     ])
@@ -62,6 +98,13 @@ $availabilityCalendar
         'step' => 1,
     ])
         ->setWidth(50)
+    ->addTextarea('booking_default_time_slots', [
+        'label' => 'Default available hours',
+        'instructions' => 'One time per line in HH:MM format, e.g. 10:00',
+        'rows' => 5,
+        'default_value' => "10:00\n12:00\n14:00\n16:00",
+    ])
+        ->setWidth(50)
     ->addTextarea('booking_hold_notice_text', [
         'label' => 'Booking hold notice text',
         'instructions' => 'Visible above the booking form. You can use {hours} and {minutes} placeholders.',
@@ -100,6 +143,18 @@ $availabilityCalendar
         'ui' => 1,
     ])
         ->setWidth(50)
+    ->addTrueFalse('booking_send_approved_email', [
+        'label' => 'Send client email when booking is approved',
+        'default_value' => 1,
+        'ui' => 1,
+    ])
+        ->setWidth(50)
+    ->addTrueFalse('booking_send_rejected_email', [
+        'label' => 'Send client email when booking is rejected',
+        'default_value' => 1,
+        'ui' => 1,
+    ])
+        ->setWidth(50)
     ->addText('booking_client_initial_email_subject', [
         'label' => 'Client email subject (after booking)',
         'default_value' => 'Potwierdzenie wstępnej rezerwacji terminu',
@@ -107,9 +162,9 @@ $availabilityCalendar
         ->setWidth(50)
     ->addTextarea('booking_client_initial_email_body', [
         'label' => 'Client email body (after booking)',
-        'instructions' => 'Placeholders: {full_name}, {date}, {option}, {hours}, {minutes}, {expires}, {site_name}.',
+        'instructions' => 'Placeholders: {full_name}, {date}, {time}, {option}, {hours}, {minutes}, {expires}, {site_name}.',
         'rows' => 6,
-        'default_value' => "Dziękuję za zapytanie.\n\nTwój termin został wstępnie zablokowany na {hours}h ({minutes} min).\nData: {date}\nUsługa / Pakiet: {option}\nHold do: {expires}\n\nSkontaktuję się z Tobą, aby potwierdzić szczegóły.\n\n{site_name}",
+        'default_value' => "Dziękuję za zapytanie.\n\nTwój termin został wstępnie zablokowany na {hours}h ({minutes} min).\nData: {date}\nGodzina: {time}\nUsługa / Pakiet: {option}\nHold do: {expires}\n\nSkontaktuję się z Tobą, aby potwierdzić szczegóły.\n\n{site_name}",
     ])
         ->setWidth(50)
     ->addText('booking_client_expired_email_subject', [
@@ -119,9 +174,33 @@ $availabilityCalendar
         ->setWidth(50)
     ->addTextarea('booking_client_expired_email_body', [
         'label' => 'Client email body (hold expired)',
-        'instructions' => 'Placeholders: {full_name}, {date}, {option}, {hours}, {minutes}, {expires}, {site_name}.',
+        'instructions' => 'Placeholders: {full_name}, {date}, {time}, {option}, {hours}, {minutes}, {expires}, {site_name}.',
         'rows' => 6,
-        'default_value' => "Cześć {full_name},\n\nWstępna rezerwacja terminu wygasła (brak potwierdzenia).\nData: {date}\nUsługa / Pakiet: {option}\nCzas holda: {hours}h ({minutes} min)\nWygasła: {expires}\n\nJeśli termin jest nadal aktualny, wyślij nowe zapytanie.\n\n{site_name}",
+        'default_value' => "Cześć {full_name},\n\nWstępna rezerwacja terminu wygasła (brak potwierdzenia).\nData: {date}\nGodzina: {time}\nUsługa / Pakiet: {option}\nCzas holda: {hours}h ({minutes} min)\nWygasła: {expires}\n\nJeśli termin jest nadal aktualny, wyślij nowe zapytanie.\n\n{site_name}",
+    ])
+        ->setWidth(50)
+    ->addText('booking_client_approved_email_subject', [
+        'label' => 'Client email subject (approved)',
+        'default_value' => 'Rezerwacja terminu została potwierdzona',
+    ])
+        ->setWidth(50)
+    ->addTextarea('booking_client_approved_email_body', [
+        'label' => 'Client email body (approved)',
+        'instructions' => 'Placeholders: {full_name}, {date}, {time}, {option}, {status}, {site_name}.',
+        'rows' => 6,
+        'default_value' => "Cześć {full_name},\n\nTwoja rezerwacja została potwierdzona.\nData: {date}\nGodzina: {time}\nUsługa / Pakiet: {option}\nStatus: {status}\n\nW razie pytań odpowiedz na tę wiadomość.\n\n{site_name}",
+    ])
+        ->setWidth(50)
+    ->addText('booking_client_rejected_email_subject', [
+        'label' => 'Client email subject (rejected)',
+        'default_value' => 'Rezerwacja terminu nie została potwierdzona',
+    ])
+        ->setWidth(50)
+    ->addTextarea('booking_client_rejected_email_body', [
+        'label' => 'Client email body (rejected)',
+        'instructions' => 'Placeholders: {full_name}, {date}, {time}, {option}, {status}, {site_name}.',
+        'rows' => 6,
+        'default_value' => "Cześć {full_name},\n\nNiestety nie mogliśmy potwierdzić rezerwacji tego terminu.\nData: {date}\nGodzina: {time}\nUsługa / Pakiet: {option}\nStatus: {status}\n\nMożesz wybrać inny dostępny termin i wysłać nowe zapytanie.\n\n{site_name}",
     ])
         ->setWidth(50)
     ->addText('booking_form_heading', [
@@ -160,6 +239,26 @@ $availabilityCalendar
         'default_value' => '{}',
         'wrapper' => [
             'class' => 'availability-map-storage',
+        ],
+    ])
+        ->setWidth(100)
+    ->addTextarea('calendar_time_slots_overrides', [
+        'label' => 'Calendar time slots overrides',
+        'instructions' => 'Managed by the visual calendar tool below.',
+        'rows' => 3,
+        'default_value' => '{}',
+        'wrapper' => [
+            'class' => 'availability-time-overrides-storage',
+        ],
+    ])
+        ->setWidth(100)
+    ->addTextarea('calendar_time_slots_reservations', [
+        'label' => 'Calendar time slots reservations',
+        'instructions' => 'Managed automatically by booking flow.',
+        'rows' => 3,
+        'default_value' => '{}',
+        'wrapper' => [
+            'class' => 'availability-time-reservations-storage',
         ],
     ])
         ->setWidth(100)

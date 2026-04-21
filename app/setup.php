@@ -302,12 +302,14 @@ add_action('init', function () {
 
 add_action('admin_post_nopriv_animated_submit_booking_request', __NAMESPACE__.'\\animated_handle_booking_request_submit');
 add_action('admin_post_animated_submit_booking_request', __NAMESPACE__.'\\animated_handle_booking_request_submit');
+add_action('admin_post_animated_booking_request_decision', __NAMESPACE__.'\\animated_handle_booking_request_decision');
 
 add_filter('manage_booking_request_posts_columns', function ($columns) {
     return [
         'cb' => $columns['cb'] ?? '<input type="checkbox" />',
         'title' => __('Zgłoszenie', 'sage'),
         'abr_date' => __('Data', 'sage'),
+        'abr_time' => __('Godzina', 'sage'),
         'abr_option' => __('Usługa / Pakiet', 'sage'),
         'abr_contact' => __('Kontakt', 'sage'),
         'abr_status' => __('Status', 'sage'),
@@ -325,6 +327,12 @@ add_action('manage_booking_request_posts_custom_column', function ($column, $pos
 
     if ($column === 'abr_option') {
         echo esc_html((string) get_post_meta($postId, '_abr_option', true));
+
+        return;
+    }
+
+    if ($column === 'abr_time') {
+        echo esc_html((string) get_post_meta($postId, '_abr_time', true));
 
         return;
     }
@@ -368,6 +376,59 @@ add_action('manage_booking_request_posts_custom_column', function ($column, $pos
     }
 }, 10, 2);
 
+add_filter('post_row_actions', function ($actions, $post) {
+    if (! $post instanceof \WP_Post || $post->post_type !== 'booking_request') {
+        return $actions;
+    }
+    if (! current_user_can('edit_post', $post->ID)) {
+        return $actions;
+    }
+
+    $status = (string) get_post_meta($post->ID, '_abr_status', true);
+    if (! in_array($status, ['hold_48h', 'approved', 'rejected', 'expired'], true)) {
+        $status = 'hold_48h';
+    }
+
+    $base = admin_url('admin-post.php');
+    if ($status !== 'approved') {
+        $approveUrl = wp_nonce_url(add_query_arg([
+            'action' => 'animated_booking_request_decision',
+            'request_id' => $post->ID,
+            'decision' => 'approve',
+        ], $base), 'animated_booking_request_decision_'.$post->ID.'_approve', 'abr_nonce');
+        $actions['abr_approve'] = '<a href="'.esc_url($approveUrl).'">Zatwierdź</a>';
+    }
+
+    if ($status !== 'rejected') {
+        $rejectUrl = wp_nonce_url(add_query_arg([
+            'action' => 'animated_booking_request_decision',
+            'request_id' => $post->ID,
+            'decision' => 'reject',
+        ], $base), 'animated_booking_request_decision_'.$post->ID.'_reject', 'abr_nonce');
+        $actions['abr_reject'] = '<a href="'.esc_url($rejectUrl).'">Odrzuć</a>';
+    }
+
+    return $actions;
+}, 10, 2);
+
+add_action('admin_notices', function () {
+    if (! is_admin()) {
+        return;
+    }
+    $screen = function_exists('get_current_screen') ? get_current_screen() : null;
+    if (! $screen || $screen->post_type !== 'booking_request') {
+        return;
+    }
+    $decision = isset($_GET['abr_decision']) ? sanitize_key((string) $_GET['abr_decision']) : '';
+    if ($decision === 'approved') {
+        echo '<div class="notice notice-success is-dismissible"><p>Status zgłoszenia ustawiono na: Zatwierdzone.</p></div>';
+        return;
+    }
+    if ($decision === 'rejected') {
+        echo '<div class="notice notice-warning is-dismissible"><p>Status zgłoszenia ustawiono na: Odrzucone.</p></div>';
+    }
+});
+
 /**
  * Parse YYYY-mm-dd date string and return timestamp at midnight.
  */
@@ -402,6 +463,275 @@ function animated_decode_status_map($raw): array
     $decoded = json_decode(trim($raw) !== '' ? $raw : '{}', true);
 
     return is_array($decoded) ? $decoded : [];
+}
+
+/**
+ * Parse HH:MM slots from textarea value.
+ */
+function animated_parse_time_slots(string $raw): array
+{
+    $lines = preg_split('/\r\n|\r|\n/', $raw) ?: [];
+    $result = [];
+    foreach ($lines as $line) {
+        $slot = trim((string) $line);
+        if ($slot === '') {
+            continue;
+        }
+        if (! preg_match('/^(?:[01]\d|2[0-3]):[0-5]\d$/', $slot)) {
+            continue;
+        }
+        $result[] = $slot;
+    }
+
+    $result = array_values(array_unique($result));
+    sort($result);
+
+    return $result;
+}
+
+/**
+ * Normalize overrides payload: date => [HH:MM...].
+ */
+function animated_normalize_time_slots_overrides($raw): array
+{
+    if (is_array($raw)) {
+        $decoded = $raw;
+    } elseif (is_string($raw)) {
+        $decoded = json_decode(trim($raw) !== '' ? $raw : '{}', true);
+        if (! is_array($decoded)) {
+            return [];
+        }
+    } else {
+        return [];
+    }
+
+    $out = [];
+    foreach ($decoded as $date => $slots) {
+        if (! is_string($date) || ! preg_match('/^\d{4}-\d{2}-\d{2}$/', $date) || ! is_array($slots)) {
+            continue;
+        }
+        $valid = [];
+        foreach ($slots as $slot) {
+            $slot = is_string($slot) ? trim($slot) : '';
+            if (preg_match('/^(?:[01]\d|2[0-3]):[0-5]\d$/', $slot)) {
+                $valid[] = $slot;
+            }
+        }
+        $valid = array_values(array_unique($valid));
+        sort($valid);
+        $out[$date] = $valid;
+    }
+
+    ksort($out);
+
+    return $out;
+}
+
+/**
+ * Normalize reservations payload: date => time => {status,expires_at,request_id}.
+ */
+function animated_normalize_time_slot_reservations($raw): array
+{
+    if (is_array($raw)) {
+        $decoded = $raw;
+    } elseif (is_string($raw)) {
+        $decoded = json_decode(trim($raw) !== '' ? $raw : '{}', true);
+        if (! is_array($decoded)) {
+            return [];
+        }
+    } else {
+        return [];
+    }
+
+    $out = [];
+    foreach ($decoded as $date => $slots) {
+        if (! is_string($date) || ! preg_match('/^\d{4}-\d{2}-\d{2}$/', $date) || ! is_array($slots)) {
+            continue;
+        }
+        foreach ($slots as $slot => $entry) {
+            if (! is_string($slot) || ! preg_match('/^(?:[01]\d|2[0-3]):[0-5]\d$/', $slot) || ! is_array($entry)) {
+                continue;
+            }
+            $status = sanitize_text_field((string) ($entry['status'] ?? ''));
+            if (! in_array($status, ['hold', 'booked'], true)) {
+                continue;
+            }
+            $expires = isset($entry['expires_at']) ? (int) $entry['expires_at'] : 0;
+            $requestId = isset($entry['request_id']) ? (int) $entry['request_id'] : 0;
+            if ($status === 'hold' && $expires > 0 && $expires <= time()) {
+                continue;
+            }
+            $out[$date][$slot] = [
+                'status' => $status,
+                'expires_at' => $expires,
+                'request_id' => $requestId,
+            ];
+        }
+        if (isset($out[$date])) {
+            ksort($out[$date]);
+        }
+    }
+
+    ksort($out);
+
+    return $out;
+}
+
+/**
+ * Get effective slots for date (override or default).
+ */
+function animated_get_module_date_slots(array $module, string $dateKey, array $overrides): array
+{
+    $defaultSlots = animated_parse_time_slots((string) ($module['booking_default_time_slots'] ?? ''));
+
+    if (! isset($overrides[$dateKey]) || ! is_array($overrides[$dateKey])) {
+        return $defaultSlots;
+    }
+
+    $slots = [];
+    foreach ($overrides[$dateKey] as $slot) {
+        if (is_string($slot) && preg_match('/^(?:[01]\d|2[0-3]):[0-5]\d$/', $slot)) {
+            $slots[] = $slot;
+        }
+    }
+    $slots = array_values(array_unique($slots));
+    sort($slots);
+
+    return $slots;
+}
+
+/**
+ * Aggregate day status from slot reservations.
+ */
+function animated_apply_slot_aggregate_to_status_map(
+    string $dateKey,
+    array $module,
+    array $overrides,
+    array $reservations,
+    array $statusMap
+): array {
+    if (! preg_match('/^\d{4}-\d{2}-\d{2}$/', $dateKey)) {
+        return $statusMap;
+    }
+
+    $slots = animated_get_module_date_slots($module, $dateKey, $overrides);
+    if (empty($slots)) {
+        return $statusMap;
+    }
+
+    $dayReservations = isset($reservations[$dateKey]) && is_array($reservations[$dateKey]) ? $reservations[$dateKey] : [];
+    $currentStatus = is_array($statusMap[$dateKey] ?? null) ? sanitize_text_field((string) (($statusMap[$dateKey]['status'] ?? 'none'))) : 'none';
+    if ($currentStatus === 'booked' && empty($dayReservations)) {
+        return $statusMap;
+    }
+
+    $reserved = 0;
+    $hasHold = false;
+    $hasBooked = false;
+    foreach ($slots as $slot) {
+        $entry = $dayReservations[$slot] ?? null;
+        if (! is_array($entry)) {
+            continue;
+        }
+        $status = sanitize_text_field((string) ($entry['status'] ?? ''));
+        if ($status === 'hold') {
+            $expires = (int) ($entry['expires_at'] ?? 0);
+            if ($expires > 0 && $expires <= time()) {
+                continue;
+            }
+            $reserved++;
+            $hasHold = true;
+            continue;
+        }
+        if ($status === 'booked') {
+            $reserved++;
+            $hasBooked = true;
+        }
+    }
+
+    $free = max(0, count($slots) - $reserved);
+    if ($free > 0) {
+        $statusMap[$dateKey] = ['status' => 'available', 'note' => ''];
+    } elseif ($hasBooked && ! $hasHold) {
+        $statusMap[$dateKey] = ['status' => 'booked', 'note' => ''];
+    } else {
+        $statusMap[$dateKey] = ['status' => 'tentative', 'note' => ''];
+    }
+
+    return $statusMap;
+}
+
+/**
+ * Build live reservations map from booking requests for a module.
+ */
+function animated_collect_live_time_reservations(int $postId, int $moduleIndex): array
+{
+    if ($postId <= 0) {
+        return [];
+    }
+
+    $requestIds = get_posts([
+        'post_type' => 'booking_request',
+        'post_status' => 'publish',
+        'posts_per_page' => 500,
+        'fields' => 'ids',
+        'meta_query' => [
+            'relation' => 'AND',
+            [
+                'key' => '_abr_post_id',
+                'value' => $postId,
+                'type' => 'NUMERIC',
+            ],
+            [
+                'key' => '_abr_module_index',
+                'value' => $moduleIndex,
+                'type' => 'NUMERIC',
+            ],
+            [
+                'key' => '_abr_status',
+                'value' => ['hold_48h', 'approved'],
+                'compare' => 'IN',
+            ],
+        ],
+    ]);
+
+    if (empty($requestIds)) {
+        return [];
+    }
+
+    $now = time();
+    $map = [];
+    foreach ($requestIds as $requestId) {
+        $dateKey = sanitize_text_field((string) get_post_meta($requestId, '_abr_date', true));
+        $timeSlot = sanitize_text_field((string) get_post_meta($requestId, '_abr_time', true));
+        $status = sanitize_text_field((string) get_post_meta($requestId, '_abr_status', true));
+        if (! preg_match('/^\d{4}-\d{2}-\d{2}$/', $dateKey) || ! preg_match('/^(?:[01]\d|2[0-3]):[0-5]\d$/', $timeSlot)) {
+            continue;
+        }
+
+        if ($status === 'approved') {
+            $map[$dateKey][$timeSlot] = [
+                'status' => 'booked',
+                'expires_at' => 0,
+                'request_id' => (int) $requestId,
+            ];
+            continue;
+        }
+
+        if ($status === 'hold_48h') {
+            $expiresAt = (int) get_post_meta($requestId, '_abr_hold_expires_at', true);
+            if ($expiresAt > 0 && $expiresAt <= $now) {
+                continue;
+            }
+            $map[$dateKey][$timeSlot] = [
+                'status' => 'hold',
+                'expires_at' => $expiresAt,
+                'request_id' => (int) $requestId,
+            ];
+        }
+    }
+
+    return animated_normalize_time_slot_reservations($map);
 }
 
 /**
@@ -579,36 +909,42 @@ function animated_cleanup_expired_booking_holds(int $limit = 100): void
         $postId = (int) get_post_meta($requestId, '_abr_post_id', true);
         $moduleIndex = (int) get_post_meta($requestId, '_abr_module_index', true);
         $dateKey = trim((string) get_post_meta($requestId, '_abr_date', true));
+        $timeSlot = sanitize_text_field((string) get_post_meta($requestId, '_abr_time', true));
         $holdExpiresAt = (int) get_post_meta($requestId, '_abr_hold_expires_at', true);
         $holdMinutes = (int) get_post_meta($requestId, '_abr_hold_minutes', true);
         $holdMinutes = max(1, min(10080, $holdMinutes > 0 ? $holdMinutes : 2880));
         $holdHours = round($holdMinutes / 60, 2);
         $holdHoursLabel = rtrim(rtrim(number_format($holdHours, 2, '.', ''), '0'), '.');
 
-        if ($postId <= 0 || $dateKey === '') {
-            update_post_meta($requestId, '_abr_status', 'expired');
-            continue;
-        }
-
-        $module = animated_get_availability_module($postId, $moduleIndex);
-
-        if (function_exists('get_field') && function_exists('update_field')) {
+        if ($postId > 0 && $dateKey !== '' && function_exists('get_field') && function_exists('update_field')) {
             $modules = get_field('flexible_modules', $postId);
             if (is_array($modules) && isset($modules[$moduleIndex]) && is_array($modules[$moduleIndex])) {
-                $statusMap = animated_decode_status_map($modules[$moduleIndex]['calendar_status_map'] ?? '{}');
-                $entry = $statusMap[$dateKey] ?? null;
+                $module = $modules[$moduleIndex];
+                if (($module['acf_fc_layout'] ?? '') === 'availability-calendar') {
+                    $statusMap = animated_decode_status_map($module['calendar_status_map'] ?? '{}');
+                    $overrides = animated_normalize_time_slots_overrides($module['calendar_time_slots_overrides'] ?? '{}');
+                    $reservations = animated_normalize_time_slot_reservations($module['calendar_time_slots_reservations'] ?? '{}');
 
-                if (is_array($entry) && (int) ($entry['hold_request_id'] ?? 0) === (int) $requestId) {
-                    $statusMap[$dateKey] = [
-                        'status' => 'available',
-                        'note' => '',
-                    ];
+                    if ($timeSlot !== '' && isset($reservations[$dateKey][$timeSlot])) {
+                        $entry = $reservations[$dateKey][$timeSlot];
+                        if ((int) ($entry['request_id'] ?? 0) === (int) $requestId) {
+                            unset($reservations[$dateKey][$timeSlot]);
+                            if (empty($reservations[$dateKey])) {
+                                unset($reservations[$dateKey]);
+                            }
+                        }
+                    }
+
+                    $statusMap = animated_apply_slot_aggregate_to_status_map($dateKey, $module, $overrides, $reservations, $statusMap);
                     $modules[$moduleIndex]['calendar_status_map'] = wp_json_encode($statusMap, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+                    $modules[$moduleIndex]['calendar_time_slots_reservations'] = wp_json_encode($reservations, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
                     update_field('flexible_modules', $modules, $postId);
                 }
             }
         }
 
+        $module = animated_get_availability_module($postId, $moduleIndex);
+        $module = is_array($module) ? $module : [];
         $sendExpiredEmailRaw = $module['booking_send_expired_email'] ?? 1;
         $sendExpiredEmail = ! in_array($sendExpiredEmailRaw, [0, '0', false, 'false'], true);
         $clientEmail = sanitize_email((string) get_post_meta($requestId, '_abr_email', true));
@@ -624,12 +960,13 @@ function animated_cleanup_expired_booking_holds(int $limit = 100): void
             }
             $bodyTemplate = trim((string) ($module['booking_client_expired_email_body'] ?? ''));
             if ($bodyTemplate === '') {
-                $bodyTemplate = "Cześć {full_name},\n\nWstępna rezerwacja terminu wygasła (brak potwierdzenia).\nData: {date}\nUsługa / Pakiet: {option}\nCzas holda: {hours}h ({minutes} min)\nWygasła: {expires}\n\nJeśli termin jest nadal aktualny, wyślij nowe zapytanie.\n\n{site_name}";
+                $bodyTemplate = "Cześć {full_name},\n\nWstępna rezerwacja terminu wygasła (brak potwierdzenia).\nData: {date}\nGodzina: {time}\nUsługa / Pakiet: {option}\nCzas holda: {hours}h ({minutes} min)\nWygasła: {expires}\n\nJeśli termin jest nadal aktualny, wyślij nowe zapytanie.\n\n{site_name}";
             }
 
             $tokenContext = [
                 'full_name' => $fullName,
                 'date' => $dateKey,
+                'time' => $timeSlot,
                 'option' => $option,
                 'hours' => $holdHoursLabel,
                 'minutes' => (string) $holdMinutes,
@@ -715,6 +1052,7 @@ function animated_handle_booking_request_submit(): void
     }
 
     $dateKey = sanitize_text_field((string) ($_POST['booking_date'] ?? ''));
+    $timeSlot = sanitize_text_field((string) ($_POST['booking_time'] ?? ''));
     $fullName = sanitize_text_field((string) ($_POST['booking_full_name'] ?? ''));
     $option = sanitize_text_field((string) ($_POST['booking_option'] ?? ''));
     $email = sanitize_email((string) ($_POST['booking_email'] ?? ''));
@@ -722,7 +1060,7 @@ function animated_handle_booking_request_submit(): void
     $message = sanitize_textarea_field((string) ($_POST['booking_message'] ?? ''));
     $consent = ! empty($_POST['booking_consent']);
 
-    if (! preg_match('/^\d{4}-\d{2}-\d{2}$/', $dateKey) || $fullName === '' || $option === '' || $email === '' || $phone === '' || ! $consent) {
+    if (! preg_match('/^\d{4}-\d{2}-\d{2}$/', $dateKey) || ! preg_match('/^(?:[01]\d|2[0-3]):[0-5]\d$/', $timeSlot) || $fullName === '' || $option === '' || $email === '' || $phone === '' || ! $consent) {
         $redirectWith('error', __('Uzupełnij wszystkie wymagane pola formularza.', 'sage'));
     }
 
@@ -743,9 +1081,34 @@ function animated_handle_booking_request_submit(): void
         $redirectWith('error', __('Wybrana opcja usługi jest nieprawidłowa.', 'sage'));
     }
 
-    $day = animated_resolve_module_day_status($module, $dateKey);
-    if (($day['status'] ?? 'none') !== 'available') {
-        $redirectWith('error', __('Ten termin nie jest już dostępny do rezerwacji.', 'sage'));
+    $statusMap = animated_decode_status_map($module['calendar_status_map'] ?? '{}');
+    $overrides = animated_normalize_time_slots_overrides($module['calendar_time_slots_overrides'] ?? '{}');
+    $reservations = animated_normalize_time_slot_reservations($module['calendar_time_slots_reservations'] ?? '{}');
+    $liveReservations = animated_collect_live_time_reservations($postId, $moduleIndex);
+    foreach ($liveReservations as $date => $slots) {
+        foreach ($slots as $slot => $entry) {
+            $reservations[$date][$slot] = $entry;
+        }
+    }
+    $daySlots = animated_get_module_date_slots($module, $dateKey, $overrides);
+    if (empty($daySlots)) {
+        $redirectWith('error', __('Brak dostępnych godzin dla wybranej daty.', 'sage'));
+    }
+    if (! in_array($timeSlot, $daySlots, true)) {
+        $redirectWith('error', __('Wybrana godzina nie jest dostępna dla tej daty.', 'sage'));
+    }
+
+    $existingSlot = $reservations[$dateKey][$timeSlot] ?? null;
+    if (is_array($existingSlot)) {
+        $slotStatus = (string) ($existingSlot['status'] ?? '');
+        $slotExpires = (int) ($existingSlot['expires_at'] ?? 0);
+        if ($slotStatus === 'booked') {
+            $redirectWith('error', __('Wybrana godzina jest już zajęta.', 'sage'));
+        }
+        if ($slotStatus === 'hold' && ($slotExpires <= 0 || $slotExpires > time())) {
+            $redirectWith('error', __('Wybrana godzina jest chwilowo zarezerwowana.', 'sage'));
+        }
+        unset($reservations[$dateKey][$timeSlot]);
     }
 
     $holdMinutesRaw = $module['booking_hold_minutes'] ?? 2880;
@@ -756,7 +1119,7 @@ function animated_handle_booking_request_submit(): void
     $holdExpiresAt = time() + ($holdMinutes * MINUTE_IN_SECONDS);
     $holdExpiresHuman = wp_date('d.m.Y H:i', $holdExpiresAt);
 
-    $requestTitle = sprintf('%s — %s — %s', $dateKey, $fullName, $option);
+    $requestTitle = sprintf('%s %s — %s — %s', $dateKey, $timeSlot, $fullName, $option);
     $requestId = wp_insert_post([
         'post_type' => 'booking_request',
         'post_status' => 'publish',
@@ -774,6 +1137,7 @@ function animated_handle_booking_request_submit(): void
     update_post_meta($requestId, '_abr_post_id', $postId);
     update_post_meta($requestId, '_abr_module_index', $moduleIndex);
     update_post_meta($requestId, '_abr_date', $dateKey);
+    update_post_meta($requestId, '_abr_time', $timeSlot);
     update_post_meta($requestId, '_abr_option', $option);
     update_post_meta($requestId, '_abr_full_name', $fullName);
     update_post_meta($requestId, '_abr_email', $email);
@@ -790,17 +1154,20 @@ function animated_handle_booking_request_submit(): void
         $holdTemplate,
     );
 
-    $updated = animated_update_module_day_status($postId, $moduleIndex, $dateKey, [
-        'status' => 'tentative',
-        'note' => $holdNote,
-        'hold_request_id' => (int) $requestId,
-        'hold_expires_at' => $holdExpiresAt,
-    ]);
+    $reservations[$dateKey][$timeSlot] = [
+        'status' => 'hold',
+        'expires_at' => $holdExpiresAt,
+        'request_id' => (int) $requestId,
+    ];
+    $statusMap = animated_apply_slot_aggregate_to_status_map($dateKey, $module, $overrides, $reservations, $statusMap);
 
-    if (! $updated) {
+    if (! function_exists('update_field')) {
         wp_delete_post($requestId, true);
         $redirectWith('error', __('Nie udało się zaktualizować kalendarza terminu.', 'sage'));
     }
+    $modules[$moduleIndex]['calendar_status_map'] = wp_json_encode($statusMap, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+    $modules[$moduleIndex]['calendar_time_slots_reservations'] = wp_json_encode($reservations, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+    update_field('flexible_modules', $modules, $postId);
 
     $notifyEmail = sanitize_email((string) ($module['booking_notification_email'] ?? ''));
     if (! is_email($notifyEmail)) {
@@ -813,6 +1180,7 @@ function animated_handle_booking_request_submit(): void
         'Nowe zapytanie rezerwacji',
         '------------------------',
         'Data: '.$dateKey,
+        'Godzina: '.$timeSlot,
         'Usługa / Pakiet: '.$option,
         'Imię i nazwisko: '.$fullName,
         'E-mail: '.$email,
@@ -837,11 +1205,12 @@ function animated_handle_booking_request_submit(): void
         }
         $clientBodyTemplate = trim((string) ($module['booking_client_initial_email_body'] ?? ''));
         if ($clientBodyTemplate === '') {
-            $clientBodyTemplate = "Dziękuję za zapytanie.\n\nTwój termin został wstępnie zablokowany na {hours}h ({minutes} min).\nData: {date}\nUsługa / Pakiet: {option}\nHold do: {expires}\n\nSkontaktuję się z Tobą, aby potwierdzić szczegóły.\n\n{site_name}";
+            $clientBodyTemplate = "Dziękuję za zapytanie.\n\nTwój termin został wstępnie zablokowany na {hours}h ({minutes} min).\nData: {date}\nGodzina: {time}\nUsługa / Pakiet: {option}\nHold do: {expires}\n\nSkontaktuję się z Tobą, aby potwierdzić szczegóły.\n\n{site_name}";
         }
         $clientTokenContext = [
             'full_name' => $fullName,
             'date' => $dateKey,
+            'time' => $timeSlot,
             'option' => $option,
             'hours' => $holdHoursLabel,
             'minutes' => (string) $holdMinutes,
@@ -864,4 +1233,135 @@ function animated_handle_booking_request_submit(): void
     );
 
     $redirectWith('success', $successMessage);
+}
+
+/**
+ * Handle approve/reject decision for booking request from admin list.
+ */
+function animated_handle_booking_request_decision(): void
+{
+    if (! is_admin()) {
+        wp_die('Forbidden', 403);
+    }
+
+    $requestId = isset($_GET['request_id']) ? absint($_GET['request_id']) : 0;
+    $decision = isset($_GET['decision']) ? sanitize_key((string) $_GET['decision']) : '';
+    if ($requestId <= 0 || ! in_array($decision, ['approve', 'reject'], true)) {
+        wp_die('Invalid request');
+    }
+    if (! current_user_can('edit_post', $requestId)) {
+        wp_die('Forbidden', 403);
+    }
+    $nonce = isset($_GET['abr_nonce']) ? (string) $_GET['abr_nonce'] : '';
+    if (! wp_verify_nonce($nonce, 'animated_booking_request_decision_'.$requestId.'_'.$decision)) {
+        wp_die('Invalid nonce');
+    }
+
+    $request = get_post($requestId);
+    if (! $request || $request->post_type !== 'booking_request') {
+        wp_die('Request not found');
+    }
+
+    $postId = (int) get_post_meta($requestId, '_abr_post_id', true);
+    $moduleIndex = (int) get_post_meta($requestId, '_abr_module_index', true);
+    $dateKey = sanitize_text_field((string) get_post_meta($requestId, '_abr_date', true));
+    $timeSlot = sanitize_text_field((string) get_post_meta($requestId, '_abr_time', true));
+    $fullName = sanitize_text_field((string) get_post_meta($requestId, '_abr_full_name', true));
+    $option = sanitize_text_field((string) get_post_meta($requestId, '_abr_option', true));
+    $email = sanitize_email((string) get_post_meta($requestId, '_abr_email', true));
+
+    $module = animated_get_availability_module($postId, $moduleIndex);
+    $module = is_array($module) ? $module : [];
+
+    if ($postId > 0 && function_exists('get_field') && function_exists('update_field')) {
+        $modules = get_field('flexible_modules', $postId);
+        if (is_array($modules) && isset($modules[$moduleIndex]) && is_array($modules[$moduleIndex])) {
+            $targetModule = $modules[$moduleIndex];
+            if (($targetModule['acf_fc_layout'] ?? '') === 'availability-calendar') {
+                $statusMap = animated_decode_status_map($targetModule['calendar_status_map'] ?? '{}');
+                $overrides = animated_normalize_time_slots_overrides($targetModule['calendar_time_slots_overrides'] ?? '{}');
+                $reservations = animated_normalize_time_slot_reservations($targetModule['calendar_time_slots_reservations'] ?? '{}');
+
+                if ($decision === 'approve') {
+                    update_post_meta($requestId, '_abr_status', 'approved');
+                    if (preg_match('/^\d{4}-\d{2}-\d{2}$/', $dateKey) && preg_match('/^(?:[01]\d|2[0-3]):[0-5]\d$/', $timeSlot)) {
+                        $reservations[$dateKey][$timeSlot] = [
+                            'status' => 'booked',
+                            'expires_at' => 0,
+                            'request_id' => $requestId,
+                        ];
+                        $statusMap = animated_apply_slot_aggregate_to_status_map($dateKey, $targetModule, $overrides, $reservations, $statusMap);
+                    }
+                } else {
+                    update_post_meta($requestId, '_abr_status', 'rejected');
+                    if (preg_match('/^\d{4}-\d{2}-\d{2}$/', $dateKey) && preg_match('/^(?:[01]\d|2[0-3]):[0-5]\d$/', $timeSlot)) {
+                        if (isset($reservations[$dateKey][$timeSlot]) && (int) ($reservations[$dateKey][$timeSlot]['request_id'] ?? 0) === $requestId) {
+                            unset($reservations[$dateKey][$timeSlot]);
+                            if (empty($reservations[$dateKey])) {
+                                unset($reservations[$dateKey]);
+                            }
+                        }
+                        $statusMap = animated_apply_slot_aggregate_to_status_map($dateKey, $targetModule, $overrides, $reservations, $statusMap);
+                    }
+                }
+
+                $modules[$moduleIndex]['calendar_status_map'] = wp_json_encode($statusMap, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+                $modules[$moduleIndex]['calendar_time_slots_reservations'] = wp_json_encode($reservations, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+                update_field('flexible_modules', $modules, $postId);
+            }
+        }
+    }
+
+    if ($decision === 'approve') {
+        $sendRaw = $module['booking_send_approved_email'] ?? 1;
+        $send = ! in_array($sendRaw, [0, '0', false, 'false'], true);
+        if ($send && is_email($email)) {
+            $subjectTpl = trim((string) ($module['booking_client_approved_email_subject'] ?? ''));
+            if ($subjectTpl === '') {
+                $subjectTpl = 'Rezerwacja terminu została potwierdzona';
+            }
+            $bodyTpl = trim((string) ($module['booking_client_approved_email_body'] ?? ''));
+            if ($bodyTpl === '') {
+                $bodyTpl = "Cześć {full_name},\n\nTwoja rezerwacja została potwierdzona.\nData: {date}\nGodzina: {time}\nUsługa / Pakiet: {option}\nStatus: {status}\n\nW razie pytań odpowiedz na tę wiadomość.\n\n{site_name}";
+            }
+            $ctx = [
+                'full_name' => $fullName,
+                'date' => $dateKey,
+                'time' => $timeSlot,
+                'option' => $option,
+                'status' => 'Zatwierdzona',
+                'site_name' => get_bloginfo('name'),
+            ];
+            wp_mail($email, animated_booking_replace_tokens($subjectTpl, $ctx), animated_booking_replace_tokens($bodyTpl, $ctx));
+        }
+    } else {
+        $sendRaw = $module['booking_send_rejected_email'] ?? 1;
+        $send = ! in_array($sendRaw, [0, '0', false, 'false'], true);
+        if ($send && is_email($email)) {
+            $subjectTpl = trim((string) ($module['booking_client_rejected_email_subject'] ?? ''));
+            if ($subjectTpl === '') {
+                $subjectTpl = 'Rezerwacja terminu nie została potwierdzona';
+            }
+            $bodyTpl = trim((string) ($module['booking_client_rejected_email_body'] ?? ''));
+            if ($bodyTpl === '') {
+                $bodyTpl = "Cześć {full_name},\n\nNiestety nie mogliśmy potwierdzić rezerwacji tego terminu.\nData: {date}\nGodzina: {time}\nUsługa / Pakiet: {option}\nStatus: {status}\n\nMożesz wybrać inny dostępny termin i wysłać nowe zapytanie.\n\n{site_name}";
+            }
+            $ctx = [
+                'full_name' => $fullName,
+                'date' => $dateKey,
+                'time' => $timeSlot,
+                'option' => $option,
+                'status' => 'Odrzucona',
+                'site_name' => get_bloginfo('name'),
+            ];
+            wp_mail($email, animated_booking_replace_tokens($subjectTpl, $ctx), animated_booking_replace_tokens($bodyTpl, $ctx));
+        }
+    }
+
+    $back = wp_get_referer();
+    if (! is_string($back) || $back === '') {
+        $back = admin_url('edit.php?post_type=booking_request');
+    }
+    wp_safe_redirect(add_query_arg('abr_decision', $decision === 'approve' ? 'approved' : 'rejected', $back));
+    exit;
 }

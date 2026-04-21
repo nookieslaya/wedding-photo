@@ -14,11 +14,17 @@ export const initAvailabilityCalendarModule = () => {
     const moduleId = (calendar.dataset.availabilityModuleId || '').trim();
     const rangesRaw = calendar.dataset.availabilityRanges;
     const statusMapRaw = calendar.dataset.availabilityMap;
+    const defaultSlotsRaw = calendar.dataset.availabilityTimeDefault;
+    const overridesRaw = calendar.dataset.availabilityTimeOverrides;
+    const reservationsRaw = calendar.dataset.availabilityTimeReservations;
     const monthsRaw = Number(calendar.dataset.availabilityMonths || 12);
     const offsetRaw = Number(calendar.dataset.availabilityOffset || 0);
 
     let ranges = [];
     let statusMap = {};
+    let defaultSlots = [];
+    let timeOverrides = {};
+    let timeReservations = {};
     try {
       ranges = normalizeRanges(JSON.parse(rangesRaw || '[]'));
     } catch (error) {
@@ -28,6 +34,28 @@ export const initAvailabilityCalendarModule = () => {
       statusMap = normalizeStatusMap(JSON.parse(statusMapRaw || '{}'));
     } catch (error) {
       statusMap = {};
+    }
+    try {
+      const parsed = JSON.parse(defaultSlotsRaw || '[]');
+      defaultSlots = Array.isArray(parsed)
+        ? [...new Set(parsed
+          .map((v) => (typeof v === 'string' ? v.trim() : ''))
+          .filter((v) => /^(?:[01]\d|2[0-3]):[0-5]\d$/.test(v)))].sort()
+        : [];
+    } catch (error) {
+      defaultSlots = [];
+    }
+    try {
+      const parsed = JSON.parse(overridesRaw || '{}');
+      timeOverrides = parsed && typeof parsed === 'object' && !Array.isArray(parsed) ? parsed : {};
+    } catch (error) {
+      timeOverrides = {};
+    }
+    try {
+      const parsed = JSON.parse(reservationsRaw || '{}');
+      timeReservations = parsed && typeof parsed === 'object' && !Array.isArray(parsed) ? parsed : {};
+    } catch (error) {
+      timeReservations = {};
     }
 
     const monthsToShow = Number.isFinite(monthsRaw) ? Math.max(3, Math.min(24, monthsRaw)) : 12;
@@ -45,6 +73,7 @@ export const initAvailabilityCalendarModule = () => {
     const bookingForm = calendar.querySelector('[data-availability-booking-form]');
     const bookingDateInput = calendar.querySelector('[data-availability-booking-date]');
     const bookingDateDisplay = calendar.querySelector('[data-availability-booking-date-display]');
+    const bookingTimeSelect = calendar.querySelector('[data-availability-booking-time]');
 
     if (!monthLabel || !weekdays || !daysGrid || !note || !prevButton || !nextButton) {
       return;
@@ -87,8 +116,51 @@ export const initAvailabilityCalendarModule = () => {
       year: 'numeric',
     });
 
+    const getDateSlots = (dateKey) => {
+      const override = timeOverrides?.[dateKey];
+      if (Array.isArray(override)) {
+        return [...new Set(override
+          .map((v) => (typeof v === 'string' ? v.trim() : ''))
+          .filter((v) => /^(?:[01]\d|2[0-3]):[0-5]\d$/.test(v)))].sort();
+      }
+      return [...defaultSlots];
+    };
+
+    const getReservedSlots = (dateKey) => {
+      const now = Math.floor(Date.now() / 1000);
+      const day = timeReservations?.[dateKey];
+      const reserved = new Set();
+      if (!day || typeof day !== 'object' || Array.isArray(day)) {
+        return reserved;
+      }
+      Object.entries(day).forEach(([slot, entry]) => {
+        if (!/^(?:[01]\d|2[0-3]):[0-5]\d$/.test(slot) || !entry || typeof entry !== 'object' || Array.isArray(entry)) {
+          return;
+        }
+        const status = String(entry.status || '');
+        if (status === 'booked') {
+          reserved.add(slot);
+          return;
+        }
+        if (status === 'hold') {
+          const expiresAt = Number(entry.expires_at) || 0;
+          if (!expiresAt || expiresAt > now) {
+            reserved.add(slot);
+          }
+        }
+      });
+      return reserved;
+    };
+
+    const getAvailableSlots = (dateKey) => {
+      const slots = getDateSlots(dateKey);
+      if (!slots.length) return [];
+      const reserved = getReservedSlots(dateKey);
+      return slots.filter((slot) => !reserved.has(slot));
+    };
+
     const updateBookingPanel = (dayData, dayDate) => {
-      if (!bookingPanel || !bookingDateInput || !bookingDateDisplay) {
+      if (!bookingPanel || !bookingDateInput || !bookingDateDisplay || !bookingTimeSelect) {
         return;
       }
 
@@ -102,6 +174,23 @@ export const initAvailabilityCalendarModule = () => {
         }
         bookingDateInput.value = '';
         bookingDateDisplay.value = '';
+        bookingTimeSelect.innerHTML = '<option value="">Wybierz godzinę</option>';
+        return;
+      }
+
+      const dateKey = toDateKey(dayDate);
+      const availableSlots = getAvailableSlots(dateKey);
+      if (availableSlots.length === 0) {
+        bookingPanel.hidden = true;
+        if (bookingCta) {
+          bookingCta.hidden = true;
+        }
+        if (bookingForm) {
+          bookingForm.hidden = true;
+        }
+        bookingDateInput.value = '';
+        bookingDateDisplay.value = '';
+        bookingTimeSelect.innerHTML = '<option value="">Brak wolnych godzin</option>';
         return;
       }
 
@@ -112,8 +201,11 @@ export const initAvailabilityCalendarModule = () => {
       if (bookingForm) {
         bookingForm.hidden = true;
       }
-      bookingDateInput.value = toDateKey(dayDate);
+      bookingDateInput.value = dateKey;
       bookingDateDisplay.value = dateFormatter.format(dayDate);
+      bookingTimeSelect.innerHTML = ['<option value="">Wybierz godzinę</option>']
+        .concat(availableSlots.map((slot) => `<option value="${slot}">${slot}</option>`))
+        .join('');
     };
 
     bookingOpenButton?.addEventListener('click', () => {
@@ -189,14 +281,19 @@ export const initAvailabilityCalendarModule = () => {
       const dayDate = parseDate(dayButton.dataset.dayDate || '');
       const dayStatus = dayButton.dataset.dayStatus || 'none';
       const dayData = dayDate ? resolveDayStatus(dayDate, ranges, statusMap) : { status: 'none', note: '' };
+      const dateKey = dayDate ? toDateKey(dayDate) : '';
+      const availableSlots = dateKey ? getAvailableSlots(dateKey) : [];
+      const slotsLabel = dayData.status === 'available' && availableSlots.length > 0
+        ? ` · Godziny: ${availableSlots.join(', ')}`
+        : '';
 
       const humanDate = dayDate
         ? new Intl.DateTimeFormat('pl-PL', { day: '2-digit', month: '2-digit', year: 'numeric' }).format(dayDate)
         : '';
 
       note.textContent = dayData.note
-        ? `${humanDate}: ${STATUS_LABEL[dayStatus] || STATUS_LABEL.none} · ${dayData.note}`
-        : `${humanDate}: ${STATUS_LABEL[dayStatus] || STATUS_LABEL.none}`;
+        ? `${humanDate}: ${STATUS_LABEL[dayStatus] || STATUS_LABEL.none} · ${dayData.note}${slotsLabel}`
+        : `${humanDate}: ${STATUS_LABEL[dayStatus] || STATUS_LABEL.none}${slotsLabel}`;
 
       updateBookingPanel(dayData, dayDate);
     });

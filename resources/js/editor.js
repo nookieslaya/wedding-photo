@@ -39,6 +39,52 @@ const parseDayMapRaw = (value) => {
   return {};
 };
 
+const parseTimeSlots = (value) => {
+  const lines = String(value || '').split(/\r?\n/);
+  return [...new Set(lines
+    .map((line) => line.trim())
+    .filter((slot) => /^(?:[01]\d|2[0-3]):[0-5]\d$/.test(slot)))].sort();
+};
+
+const parseTimeOverridesRaw = (value) => {
+  const parsed = parseDayMapRaw(value);
+  const out = {};
+  Object.entries(parsed).forEach(([key, slots]) => {
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(key) || !Array.isArray(slots)) {
+      return;
+    }
+    out[key] = [...new Set(slots
+      .map((slot) => (typeof slot === 'string' ? slot.trim() : ''))
+      .filter((slot) => /^(?:[01]\d|2[0-3]):[0-5]\d$/.test(slot)))].sort();
+  });
+  return out;
+};
+
+const parseTimeReservationsRaw = (value) => {
+  const parsed = parseDayMapRaw(value);
+  const out = {};
+  Object.entries(parsed).forEach(([dateKey, slots]) => {
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(dateKey) || !slots || typeof slots !== 'object' || Array.isArray(slots)) {
+      return;
+    }
+    Object.entries(slots).forEach(([slot, entry]) => {
+      if (!/^(?:[01]\d|2[0-3]):[0-5]\d$/.test(slot) || !entry || typeof entry !== 'object' || Array.isArray(entry)) {
+        return;
+      }
+      const status = String(entry.status || '');
+      if (!['hold', 'booked'].includes(status)) {
+        return;
+      }
+      out[dateKey] = out[dateKey] || {};
+      out[dateKey][slot] = {
+        status,
+        expires_at: Number(entry.expires_at) || 0,
+      };
+    });
+  });
+  return out;
+};
+
 const ensureManagerUi = (managerNode) => {
   if (managerNode.dataset.managerReady === '1') {
     return;
@@ -47,8 +93,14 @@ const ensureManagerUi = (managerNode) => {
   const scope = managerNode.closest('.layout') || managerNode.closest('.acf-fields') || document;
   const storage = scope.querySelector('[data-name="calendar_status_map"] textarea');
   const storageInput = scope.querySelector('input[name*="[calendar_status_map]"]');
+  const timeOverridesStorage = scope.querySelector('[data-name="calendar_time_slots_overrides"] textarea')
+    || scope.querySelector('input[name*="[calendar_time_slots_overrides]"]');
+  const timeReservationsStorage = scope.querySelector('[data-name="calendar_time_slots_reservations"] textarea')
+    || scope.querySelector('input[name*="[calendar_time_slots_reservations]"]');
   const monthsInput = scope.querySelector('[data-name="months_to_show"] input');
   const offsetInput = scope.querySelector('[data-name="start_month_offset"] input');
+  const defaultSlotsInput = scope.querySelector('[data-name="booking_default_time_slots"] textarea')
+    || scope.querySelector('[data-name="booking_default_time_slots"] input');
   let mount = managerNode.querySelector('.availability-admin-manager__mount');
 
   if (!mount) {
@@ -66,6 +118,14 @@ const ensureManagerUi = (managerNode) => {
   const storageField = (storage || storageInput)?.closest('.acf-field');
   if (storageField) {
     storageField.classList.add('availability-map-storage--hidden');
+  }
+  const timeOverridesField = timeOverridesStorage?.closest('.acf-field');
+  if (timeOverridesField) {
+    timeOverridesField.classList.add('availability-time-overrides-storage--hidden');
+  }
+  const timeReservationsField = timeReservationsStorage?.closest('.acf-field');
+  if (timeReservationsField) {
+    timeReservationsField.classList.add('availability-time-reservations-storage--hidden');
   }
 
   const getStorageRaw = () => {
@@ -102,6 +162,8 @@ const ensureManagerUi = (managerNode) => {
     selectedDates: new Set(),
     noteDraft: '',
     dayMap: {},
+    timeOverrides: {},
+    timeReservations: {},
     months: [],
   };
 
@@ -199,6 +261,44 @@ const ensureManagerUi = (managerNode) => {
     setStorageRaw(JSON.stringify(sorted));
   };
 
+  const getTimeOverridesRaw = () => {
+    if (timeOverridesStorage && typeof timeOverridesStorage.value === 'string') {
+      return timeOverridesStorage.value;
+    }
+    return '{}';
+  };
+
+  const setTimeOverridesRaw = (nextValue) => {
+    if (!timeOverridesStorage) {
+      return;
+    }
+    timeOverridesStorage.value = nextValue;
+    timeOverridesStorage.dispatchEvent(new Event('input', { bubbles: true }));
+    timeOverridesStorage.dispatchEvent(new Event('change', { bubbles: true }));
+  };
+
+  const getTimeReservationsRaw = () => {
+    if (timeReservationsStorage && typeof timeReservationsStorage.value === 'string') {
+      return timeReservationsStorage.value;
+    }
+    return '{}';
+  };
+
+  const loadTimeData = () => {
+    state.timeOverrides = parseTimeOverridesRaw(getTimeOverridesRaw());
+    state.timeReservations = parseTimeReservationsRaw(getTimeReservationsRaw());
+  };
+
+  const saveTimeOverrides = () => {
+    const sorted = Object.keys(state.timeOverrides)
+      .sort()
+      .reduce((acc, key) => {
+        acc[key] = state.timeOverrides[key];
+        return acc;
+      }, {});
+    setTimeOverridesRaw(JSON.stringify(sorted));
+  };
+
   const rebuildMonths = () => {
     const monthsToShowRaw = Number(monthsInput?.value ?? 12);
     const offsetRaw = Number(offsetInput?.value ?? 0);
@@ -237,6 +337,12 @@ const ensureManagerUi = (managerNode) => {
           <button type="button" class="button" data-avm-clear>Wyczyść zaznaczone</button>
           <button type="button" class="button" data-avm-unselect>Odznacz wszystko</button>
         </div>
+        <div class="availability-admin-ui__time-tools">
+          <input type="text" class="availability-admin-ui__time-input" data-avm-time-slot placeholder="Godzina HH:MM">
+          <button type="button" class="button" data-avm-time-add>Dodaj godzinę do zaznaczonych dni</button>
+          <button type="button" class="button" data-avm-time-remove>Usuń godzinę z zaznaczonych dni</button>
+        </div>
+        <div class="availability-admin-ui__time-preview" data-avm-time-preview></div>
       </div>
       <div class="availability-admin-ui__weekdays" data-avm-weekdays></div>
       <div class="availability-admin-ui__days" data-avm-days></div>
@@ -250,6 +356,10 @@ const ensureManagerUi = (managerNode) => {
   const statusesWrap = mount.querySelector('[data-avm-statuses]');
   const noteInput = mount.querySelector('[data-avm-note]');
   const summary = mount.querySelector('[data-avm-summary]');
+  const timeInput = mount.querySelector('[data-avm-time-slot]');
+  const timePreview = mount.querySelector('[data-avm-time-preview]');
+  const timeAddButton = mount.querySelector('[data-avm-time-add]');
+  const timeRemoveButton = mount.querySelector('[data-avm-time-remove]');
   const prevButton = mount.querySelector('[data-avm-prev]');
   const nextButton = mount.querySelector('[data-avm-next]');
   const applyButton = mount.querySelector('[data-avm-apply]');
@@ -257,7 +367,8 @@ const ensureManagerUi = (managerNode) => {
   const unselectButton = mount.querySelector('[data-avm-unselect]');
 
   if (!monthLabel || !weekdays || !daysGrid || !statusesWrap || !noteInput || !summary ||
-      !prevButton || !nextButton || !applyButton || !clearButton || !unselectButton) {
+      !prevButton || !nextButton || !applyButton || !clearButton || !unselectButton ||
+      !timeInput || !timePreview || !timeAddButton || !timeRemoveButton) {
     return;
   }
 
@@ -273,12 +384,74 @@ const ensureManagerUi = (managerNode) => {
 
   const getDayStatus = (dateKey) => state.dayMap[dateKey]?.status || 'none';
 
+  const getDefaultSlots = () => parseTimeSlots(defaultSlotsInput?.value || '');
+
+  const getDateSlots = (dateKey) => {
+    if (Array.isArray(state.timeOverrides[dateKey])) {
+      return [...state.timeOverrides[dateKey]].sort();
+    }
+    return getDefaultSlots();
+  };
+
+  const getReservedSlots = (dateKey) => {
+    const now = Math.floor(Date.now() / 1000);
+    const day = state.timeReservations?.[dateKey];
+    const reserved = new Set();
+    if (!day || typeof day !== 'object' || Array.isArray(day)) {
+      return reserved;
+    }
+    Object.entries(day).forEach(([slot, entry]) => {
+      if (!entry || typeof entry !== 'object' || Array.isArray(entry)) {
+        return;
+      }
+      const status = String(entry.status || '');
+      if (status === 'booked') {
+        reserved.add(slot);
+        return;
+      }
+      if (status === 'hold') {
+        const expiresAt = Number(entry.expires_at) || 0;
+        if (!expiresAt || expiresAt > now) {
+          reserved.add(slot);
+        }
+      }
+    });
+    return reserved;
+  };
+
+  const renderTimePreview = () => {
+    if (state.selectedDates.size === 0) {
+      timePreview.innerHTML = '<strong>Podgląd godzin:</strong> Zaznacz jedną datę, aby zobaczyć dostępne godziny.';
+      return;
+    }
+    if (state.selectedDates.size > 1) {
+      timePreview.innerHTML = '<strong>Podgląd godzin:</strong> Zaznaczono kilka dat. Podgląd działa dla jednej daty naraz.';
+      return;
+    }
+
+    const [dateKey] = [...state.selectedDates];
+    const configured = getDateSlots(dateKey);
+    if (configured.length === 0) {
+      timePreview.innerHTML = `<strong>Podgląd godzin dla ${dateKey}:</strong> Brak skonfigurowanych godzin.`;
+      return;
+    }
+    const reserved = getReservedSlots(dateKey);
+    const available = configured.filter((slot) => !reserved.has(slot));
+    const reservedList = configured.filter((slot) => reserved.has(slot));
+    timePreview.innerHTML = `
+      <strong>Podgląd godzin dla ${dateKey}:</strong><br>
+      <span><strong>Dostępne:</strong> ${available.length ? available.join(', ') : 'Brak wolnych godzin'}</span><br>
+      <span><strong>Zajęte / hold:</strong> ${reservedList.length ? reservedList.join(', ') : 'Brak'}</span>
+    `;
+  };
+
   const renderSummary = () => {
     const selectedCount = state.selectedDates.size;
     const totalMapped = Object.keys(state.dayMap).length;
     summary.textContent = selectedCount > 0
       ? `Zaznaczono dni: ${selectedCount} · Status: ${STATUS_LABEL[state.selectedStatus]}`
       : `Kliknij dni w kalendarzu, potem wybierz status i zastosuj. Zapisane: ${totalMapped} (mapa: ${state.mapCount || 0}, zakresy: ${state.repeaterCount || 0})`;
+    renderTimePreview();
   };
 
   const alignMonthToExistingStatuses = () => {
@@ -411,6 +584,37 @@ const ensureManagerUi = (managerNode) => {
     renderMonth();
   });
 
+  timeAddButton.addEventListener('click', () => {
+    const slot = String(timeInput.value || '').trim();
+    if (!/^(?:[01]\d|2[0-3]):[0-5]\d$/.test(slot) || state.selectedDates.size === 0) {
+      return;
+    }
+    state.selectedDates.forEach((dateKey) => {
+      const current = Array.isArray(state.timeOverrides[dateKey]) ? state.timeOverrides[dateKey] : [];
+      state.timeOverrides[dateKey] = [...new Set(current.concat([slot]))].sort();
+    });
+    saveTimeOverrides();
+    renderSummary();
+  });
+
+  timeRemoveButton.addEventListener('click', () => {
+    const slot = String(timeInput.value || '').trim();
+    if (!/^(?:[01]\d|2[0-3]):[0-5]\d$/.test(slot) || state.selectedDates.size === 0) {
+      return;
+    }
+    state.selectedDates.forEach((dateKey) => {
+      const current = Array.isArray(state.timeOverrides[dateKey]) ? state.timeOverrides[dateKey] : [];
+      const next = current.filter((v) => v !== slot);
+      if (next.length > 0) {
+        state.timeOverrides[dateKey] = next;
+      } else {
+        delete state.timeOverrides[dateKey];
+      }
+    });
+    saveTimeOverrides();
+    renderSummary();
+  });
+
   prevButton.addEventListener('click', () => {
     if (state.currentMonthIndex > 0) {
       state.currentMonthIndex -= 1;
@@ -436,6 +640,7 @@ const ensureManagerUi = (managerNode) => {
 
   const renderAll = () => {
     loadDayMap();
+    loadTimeData();
     rebuildMonths();
     alignMonthToExistingStatuses();
     updateStatusButtons();
@@ -454,6 +659,8 @@ const ensureManagerUi = (managerNode) => {
     '[data-name="date_ranges"] [data-name="note"] textarea',
     '[data-name="months_to_show"] input',
     '[data-name="start_month_offset"] input',
+    '[data-name="booking_default_time_slots"] textarea',
+    '[data-name="booking_default_time_slots"] input',
   ];
 
   scope.addEventListener('change', (event) => {

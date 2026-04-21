@@ -1,4 +1,52 @@
+.availability-calendar-module.availability-theme-dark {
+  --ac-bg-main: #000000;
+  --ac-bg-shell: rgba(255, 255, 255, 0.03);
+  --ac-fg-main: rgba(255, 255, 255, 0.92);
+}
+
+.availability-calendar-module.availability-theme-graphite {
+  --ac-bg-main: #090b10;
+  --ac-bg-shell: rgba(255, 255, 255, 0.04);
+  --ac-fg-main: rgba(238, 243, 250, 0.94);
+}
+
+.availability-calendar-module.availability-theme-smoke {
+  --ac-bg-main: #101317;
+  --ac-bg-shell: rgba(255, 255, 255, 0.045);
+  --ac-fg-main: rgba(243, 245, 248, 0.94);
+}
+
+.availability-calendar-module.availability-bg-gradient {
+  background: radial-gradient(1100px 580px at 78% 22%, rgba(239, 68, 68, 0.08), transparent 66%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.01), rgba(0, 0, 0, 0.24)),
+    var(--ac-bg-main, #000);
+}
+
+.availability-calendar-module.availability-bg-plain {
+  background: var(--ac-bg-main, #000);
+}
+
+.availability-calendar-module.availability-bg-mesh {
+  background:
+    radial-gradient(720px 420px at 18% 15%, rgba(59, 130, 246, 0.08), transparent 70%),
+    radial-gradient(760px 450px at 84% 78%, rgba(239, 68, 68, 0.08), transparent 72%),
+    var(--ac-bg-main, #000);
+}
+
+.availability-calendar-module.availability-font-modern {
+  font-family: "Inter Tight", "Sora", "Helvetica Neue", Arial, sans-serif;
+}
+
+.availability-calendar-module.availability-font-editorial {
+  font-family: "Bricolage Grotesque", "Manrope", "Helvetica Neue", Arial, sans-serif;
+}
+
+.availability-calendar-module.availability-font-mono {
+  font-family: "IBM Plex Mono", "Space Mono", "JetBrains Mono", monospace;
+}
+
 .availability-calendar-module .availability-calendar-shell {
+  background: var(--ac-bg-shell, rgba(255, 255, 255, 0.03));
   backdrop-filter: blur(1.5px);
 }
 
