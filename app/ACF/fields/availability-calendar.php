@@ -4,17 +4,21 @@ namespace App;
 
 use StoutLogic\AcfBuilder\FieldsBuilder;
 
+$acfLocale = strtolower((string) determine_locale());
+$acfIsPolish = str_starts_with($acfLocale, 'pl');
+$acfTr = static fn (string $en, string $pl): string => $acfIsPolish ? $pl : $en;
+
 $availabilityCalendar = new FieldsBuilder('availability-calendar', [
     'label' => 'Availability Calendar',
 ]);
 
 $availabilityCalendar
     ->addText('section_title', [
-        'label' => 'Section title',
+        'label' => $acfTr('Section title', 'Tytuł sekcji'),
     ])
         ->setWidth(30)
     ->addText('section_subtitle', [
-        'label' => 'Section subtitle',
+        'label' => $acfTr('Section subtitle', 'Podtytuł sekcji'),
     ])
         ->setWidth(30)
     ->addSelect('theme_preset', [

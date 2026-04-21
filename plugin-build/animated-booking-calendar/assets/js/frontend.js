@@ -1,9 +1,18 @@
 (() => {
+  const I18N = window.abcCalendarI18n || {};
+  const t = (key, fallback) => {
+    const value = I18N[key];
+    return typeof value === 'string' && value.trim() !== '' ? value : fallback;
+  };
+  const tWeekdays = Array.isArray(I18N.weekdays) && I18N.weekdays.length === 7
+    ? I18N.weekdays
+    : ['Pon', 'Wt', 'Śr', 'Czw', 'Pt', 'Sob', 'Nd'];
+
   const STATUS_LABEL = {
-    available: 'Dostępny',
-    tentative: 'Wstępna rezerwacja',
-    booked: 'Zajęty',
-    none: 'Brak informacji',
+    available: t('status_available', 'Dostępny'),
+    tentative: t('status_tentative', 'Wstępna rezerwacja'),
+    booked: t('status_booked', 'Zajęty'),
+    none: t('status_none', 'Brak informacji'),
   };
 
   const toDateKey = (date) => {
@@ -144,7 +153,7 @@
       months.push(new Date(base.getFullYear(), base.getMonth() + i, 1));
     }
 
-    const weekdaysLabels = ['Pon', 'Wt', 'Śr', 'Czw', 'Pt', 'Sob', 'Nd'];
+    const weekdaysLabels = tWeekdays;
     weekdays.innerHTML = weekdaysLabels.map((d) => `<div>${d}</div>`).join('');
 
     const monthFormatter = new Intl.DateTimeFormat('pl-PL', { month: 'long', year: 'numeric' });
@@ -157,7 +166,7 @@
       if (dateInput) dateInput.value = '';
       if (dateDisplay) dateDisplay.value = '';
       if (timeSelect) {
-        timeSelect.innerHTML = '<option value="">Wybierz godzinę</option>';
+        timeSelect.innerHTML = `<option value="">${t('choose_hour', 'Wybierz godzinę')}</option>`;
         timeSelect.value = '';
       }
     };
@@ -183,7 +192,7 @@
       form.hidden = true;
       dateInput.value = dayKey;
       dateDisplay.value = dateFormatter.format(d);
-      timeSelect.innerHTML = ['<option value="">Wybierz godzinę</option>']
+      timeSelect.innerHTML = [`<option value="">${t('choose_hour', 'Wybierz godzinę')}</option>`]
         .concat(daySlots.map((slot) => `<option value="${slot}">${slot}</option>`))
         .join('');
     };
@@ -229,7 +238,7 @@
       const first = daysGrid.querySelector('.abc-day[data-day]');
       if (first) first.click();
       else {
-        note.textContent = 'Brak danych.';
+        note.textContent = t('no_data_month', 'Brak danych.');
         hideBooking();
       }
     };
@@ -248,7 +257,7 @@
       const d = day ? new Date(day + 'T00:00:00') : null;
       const dateText = d ? dateFormatter.format(d) : '';
       const daySlots = day ? getAvailableSlots(day) : [];
-      const slotsText = daySlots.length > 0 ? ` · Godziny: ${daySlots.join(', ')}` : '';
+      const slotsText = daySlots.length > 0 ? ` · ${t('hours_prefix', 'Godziny:')} ${daySlots.join(', ')}` : '';
 
       note.textContent = data.note
         ? `${dateText}: ${(STATUS_LABEL[data.status] || STATUS_LABEL.none)} · ${data.note}${slotsText}`

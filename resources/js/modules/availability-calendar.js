@@ -17,6 +17,7 @@ export const initAvailabilityCalendarModule = () => {
     const defaultSlotsRaw = calendar.dataset.availabilityTimeDefault;
     const overridesRaw = calendar.dataset.availabilityTimeOverrides;
     const reservationsRaw = calendar.dataset.availabilityTimeReservations;
+    const i18nRaw = calendar.dataset.availabilityI18n;
     const monthsRaw = Number(calendar.dataset.availabilityMonths || 12);
     const offsetRaw = Number(calendar.dataset.availabilityOffset || 0);
 
@@ -25,6 +26,7 @@ export const initAvailabilityCalendarModule = () => {
     let defaultSlots = [];
     let timeOverrides = {};
     let timeReservations = {};
+    let i18n = {};
     try {
       ranges = normalizeRanges(JSON.parse(rangesRaw || '[]'));
     } catch (error) {
@@ -57,6 +59,29 @@ export const initAvailabilityCalendarModule = () => {
     } catch (error) {
       timeReservations = {};
     }
+    try {
+      const parsed = JSON.parse(i18nRaw || '{}');
+      i18n = parsed && typeof parsed === 'object' && !Array.isArray(parsed) ? parsed : {};
+    } catch (error) {
+      i18n = {};
+    }
+
+    const statusLabel = {
+      ...STATUS_LABEL,
+      available: i18n.status_available || STATUS_LABEL.available,
+      tentative: i18n.status_tentative || STATUS_LABEL.tentative,
+      booked: i18n.status_booked || STATUS_LABEL.booked,
+      none: i18n.status_none || STATUS_LABEL.none,
+    };
+    const locale = typeof i18n.locale === 'string' && i18n.locale.trim() !== ''
+      ? i18n.locale
+      : (document.documentElement.lang || 'en-US');
+    const weekdaysLabels = Array.isArray(i18n.weekdays) && i18n.weekdays.length === 7
+      ? i18n.weekdays
+      : ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+    const chooseHourLabel = typeof i18n.choose_hour === 'string' && i18n.choose_hour.trim() !== '' ? i18n.choose_hour : 'Choose time';
+    const noDataMonthLabel = typeof i18n.no_data_month === 'string' && i18n.no_data_month.trim() !== '' ? i18n.no_data_month : 'No data for selected month.';
+    const hoursPrefix = typeof i18n.hours_prefix === 'string' && i18n.hours_prefix.trim() !== '' ? i18n.hours_prefix : 'Hours:';
 
     const monthsToShow = Number.isFinite(monthsRaw) ? Math.max(3, Math.min(24, monthsRaw)) : 12;
     const startOffset = Number.isFinite(offsetRaw) ? Math.max(-12, Math.min(12, offsetRaw)) : 0;
@@ -103,14 +128,13 @@ export const initAvailabilityCalendarModule = () => {
 
     let monthIndex = 0;
 
-    const weekdayFormatter = ['Pon', 'Wt', 'Śr', 'Czw', 'Pt', 'Sob', 'Nd'];
-    weekdays.innerHTML = weekdayFormatter.map((label) => `<div>${label}</div>`).join('');
+    weekdays.innerHTML = weekdaysLabels.map((label) => `<div>${label}</div>`).join('');
 
-    const monthNameFormatter = new Intl.DateTimeFormat('pl-PL', {
+    const monthNameFormatter = new Intl.DateTimeFormat(locale, {
       month: 'long',
       year: 'numeric',
     });
-    const dateFormatter = new Intl.DateTimeFormat('pl-PL', {
+    const dateFormatter = new Intl.DateTimeFormat(locale, {
       day: '2-digit',
       month: '2-digit',
       year: 'numeric',
@@ -174,7 +198,7 @@ export const initAvailabilityCalendarModule = () => {
         }
         bookingDateInput.value = '';
         bookingDateDisplay.value = '';
-        bookingTimeSelect.innerHTML = '<option value="">Wybierz godzinę</option>';
+        bookingTimeSelect.innerHTML = `<option value="">${chooseHourLabel}</option>`;
         return;
       }
 
@@ -190,7 +214,7 @@ export const initAvailabilityCalendarModule = () => {
         }
         bookingDateInput.value = '';
         bookingDateDisplay.value = '';
-        bookingTimeSelect.innerHTML = '<option value="">Brak wolnych godzin</option>';
+        bookingTimeSelect.innerHTML = `<option value="">${chooseHourLabel}</option>`;
         return;
       }
 
@@ -203,7 +227,7 @@ export const initAvailabilityCalendarModule = () => {
       }
       bookingDateInput.value = dateKey;
       bookingDateDisplay.value = dateFormatter.format(dayDate);
-      bookingTimeSelect.innerHTML = ['<option value="">Wybierz godzinę</option>']
+      bookingTimeSelect.innerHTML = [`<option value="">${chooseHourLabel}</option>`]
         .concat(availableSlots.map((slot) => `<option value="${slot}">${slot}</option>`))
         .join('');
     };
@@ -257,7 +281,7 @@ export const initAvailabilityCalendarModule = () => {
       if (firstDay) {
         firstDay.click();
       } else {
-        note.textContent = 'Brak danych dla wybranego miesiąca.';
+        note.textContent = noDataMonthLabel;
         updateBookingPanel(null, null);
       }
     };
@@ -284,16 +308,16 @@ export const initAvailabilityCalendarModule = () => {
       const dateKey = dayDate ? toDateKey(dayDate) : '';
       const availableSlots = dateKey ? getAvailableSlots(dateKey) : [];
       const slotsLabel = dayData.status === 'available' && availableSlots.length > 0
-        ? ` · Godziny: ${availableSlots.join(', ')}`
+        ? ` · ${hoursPrefix} ${availableSlots.join(', ')}`
         : '';
 
       const humanDate = dayDate
-        ? new Intl.DateTimeFormat('pl-PL', { day: '2-digit', month: '2-digit', year: 'numeric' }).format(dayDate)
+        ? new Intl.DateTimeFormat(locale, { day: '2-digit', month: '2-digit', year: 'numeric' }).format(dayDate)
         : '';
 
       note.textContent = dayData.note
-        ? `${humanDate}: ${STATUS_LABEL[dayStatus] || STATUS_LABEL.none} · ${dayData.note}${slotsLabel}`
-        : `${humanDate}: ${STATUS_LABEL[dayStatus] || STATUS_LABEL.none}${slotsLabel}`;
+        ? `${humanDate}: ${statusLabel[dayStatus] || statusLabel.none} · ${dayData.note}${slotsLabel}`
+        : `${humanDate}: ${statusLabel[dayStatus] || statusLabel.none}${slotsLabel}`;
 
       updateBookingPanel(dayData, dayDate);
     });

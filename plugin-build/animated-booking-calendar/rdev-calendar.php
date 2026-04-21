@@ -11,6 +11,10 @@ if (! defined('ABSPATH')) {
     exit;
 }
 
+add_action('plugins_loaded', static function () {
+    load_plugin_textdomain('rdev-calendar', false, dirname(plugin_basename(__FILE__)) . '/languages');
+});
+
 $rdev_calendar_boot_error = '';
 
 $required_files = [

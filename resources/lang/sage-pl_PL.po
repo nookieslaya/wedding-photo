@@ -1,0 +1,355 @@
+# Polish translations for PACKAGE package.
+# Copyright (C) 2026 THE PACKAGE'S COPYRIGHT HOLDER
+# This file is distributed under the same license as the PACKAGE package.
+# Automatically generated, 2026.
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: PACKAGE VERSION\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2026-04-21 12:57+0200\n"
+"PO-Revision-Date: 2026-04-21 12:57+0200\n"
+"Last-Translator: Automatically generated\n"
+"Language-Team: none\n"
+"Language: pl\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=3; plural=(n==1 ? 0 : n%10>=2 && n%10<=4 && (n%100<10 "
+"|| n%100>=20) ? 1 : 2);\n"
+
+#: app/setup.php:55
+msgid "Dostępny"
+msgstr ""
+
+#: app/setup.php:56
+msgid "Wstępna"
+msgstr ""
+
+#: app/setup.php:57
+msgid "Zajęty"
+msgstr ""
+
+#: app/setup.php:58
+msgid "Wyczyść zaznaczone"
+msgstr ""
+
+#: app/setup.php:59
+msgid "Godzina HH:MM"
+msgstr ""
+
+#: app/setup.php:60
+msgid "Dodaj godzinę do zaznaczonych dni"
+msgstr ""
+
+#: app/setup.php:61
+msgid "Usuń godzinę z zaznaczonych dni"
+msgstr ""
+
+#: app/setup.php:62
+msgid "Pon"
+msgstr ""
+
+#: app/setup.php:62
+msgid "Wt"
+msgstr ""
+
+#: app/setup.php:62
+msgid "Śr"
+msgstr ""
+
+#: app/setup.php:62
+msgid "Czw"
+msgstr ""
+
+#: app/setup.php:62
+msgid "Pt"
+msgstr ""
+
+#: app/setup.php:62
+msgid "Sob"
+msgstr ""
+
+#: app/setup.php:62
+msgid "Nd"
+msgstr ""
+
+#: app/setup.php:63
+msgid "Podgląd godzin:"
+msgstr ""
+
+#: app/setup.php:64
+msgid "Zaznacz jedną datę, aby zobaczyć dostępne godziny."
+msgstr ""
+
+#: app/setup.php:65
+msgid "Zaznaczono kilka dat. Podgląd działa dla jednej daty naraz."
+msgstr ""
+
+#: app/setup.php:66
+msgid "Brak skonfigurowanych godzin."
+msgstr ""
+
+#: app/setup.php:67
+msgid "Dostępne:"
+msgstr ""
+
+#: app/setup.php:68
+msgid "Zajęte / hold:"
+msgstr ""
+
+#: app/setup.php:69
+msgid "Brak wolnych godzin"
+msgstr ""
+
+#: app/setup.php:70
+msgid "Brak"
+msgstr ""
+
+#: app/setup.php:71
+msgid "Zaznaczono dni:"
+msgstr ""
+
+#: app/setup.php:72
+msgid "Status:"
+msgstr ""
+
+#: app/setup.php:73
+msgid "Kliknij dni w kalendarzu, potem wybierz status i zastosuj. Zapisane:"
+msgstr ""
+
+#: app/setup.php:74
+msgid "mapa"
+msgstr ""
+
+#: app/setup.php:75
+msgid "zakresy"
+msgstr ""
+
+#: app/setup.php:124
+msgid "Primary Navigation"
+msgstr ""
+
+#: app/setup.php:192
+msgid "Primary"
+msgstr ""
+
+#: app/setup.php:197
+msgid "Footer"
+msgstr ""
+
+#: app/setup.php:210
+msgid "Wydarzenia"
+msgstr ""
+
+#: app/setup.php:211
+msgid "Wydarzenie"
+msgstr ""
+
+#: app/setup.php:212
+msgid "Dodaj nowe"
+msgstr ""
+
+#: app/setup.php:213
+msgid "Dodaj wydarzenie"
+msgstr ""
+
+#: app/setup.php:214
+msgid "Edytuj wydarzenie"
+msgstr ""
+
+#: app/setup.php:215
+msgid "Nowe wydarzenie"
+msgstr ""
+
+#: app/setup.php:216
+msgid "Zobacz wydarzenie"
+msgstr ""
+
+#: app/setup.php:217
+msgid "Szukaj wydarzeń"
+msgstr ""
+
+#: app/setup.php:218
+msgid "Nie znaleziono wydarzeń"
+msgstr ""
+
+#: app/setup.php:219
+msgid "Brak wydarzeń w koszu"
+msgstr ""
+
+#: app/setup.php:220
+msgid "Wszystkie wydarzenia"
+msgstr ""
+
+#: app/setup.php:221
+msgid "Archiwum wydarzeń"
+msgstr ""
+
+#: app/setup.php:263 app/setup.php:264
+msgid "Global Settings"
+msgstr ""
+
+#: app/setup.php:273 app/setup.php:274
+msgid "Social Media"
+msgstr ""
+
+#: app/setup.php:289
+msgid "Zapytania Rezerwacji"
+msgstr ""
+
+#: app/setup.php:290
+msgid "Zapytanie Rezerwacji"
+msgstr ""
+
+#: app/setup.php:291
+msgid "Dodaj zapytanie"
+msgstr ""
+
+#: app/setup.php:292
+msgid "Dodaj zapytanie rezerwacji"
+msgstr ""
+
+#: app/setup.php:293
+msgid "Edytuj zapytanie"
+msgstr ""
+
+#: app/setup.php:294
+msgid "Nowe zapytanie"
+msgstr ""
+
+#: app/setup.php:295
+msgid "Zobacz zapytanie"
+msgstr ""
+
+#: app/setup.php:296
+msgid "Szukaj zapytań"
+msgstr ""
+
+#: app/setup.php:297
+msgid "Brak zapytań"
+msgstr ""
+
+#: app/setup.php:298
+msgid "Wszystkie zapytania"
+msgstr ""
+
+#: app/setup.php:337
+msgid "Zgłoszenie"
+msgstr ""
+
+#: app/setup.php:338
+msgid "Data"
+msgstr ""
+
+#: app/setup.php:339
+msgid "Godzina"
+msgstr ""
+
+#: app/setup.php:340
+msgid "Usługa / Pakiet"
+msgstr ""
+
+#: app/setup.php:341
+msgid "Kontakt"
+msgstr ""
+
+#: app/setup.php:342
+msgid "Status"
+msgstr ""
+
+#: app/setup.php:343
+msgid "Hold do"
+msgstr ""
+
+#: app/setup.php:344
+msgid "Data utworzenia"
+msgstr ""
+
+#: app/setup.php:385
+msgid "Hold aktywny"
+msgstr ""
+
+#: app/setup.php:386
+msgid "Wygasło"
+msgstr ""
+
+#: app/setup.php:387
+msgid "Zatwierdzone"
+msgstr ""
+
+#: app/setup.php:388
+msgid "Odrzucone"
+msgstr ""
+
+#: app/setup.php:426
+msgid "Zatwierdź"
+msgstr ""
+
+#: app/setup.php:435
+msgid "Odrzuć"
+msgstr ""
+
+#: app/setup.php:451
+msgid "Status zgłoszenia ustawiono na: Zatwierdzone."
+msgstr ""
+
+#: app/setup.php:455
+msgid "Status zgłoszenia ustawiono na: Odrzucone."
+msgstr ""
+
+#: app/setup.php:1077
+msgid "Niepoprawny token formularza. Odśwież stronę i spróbuj ponownie."
+msgstr ""
+
+#: app/setup.php:1082
+msgid "Dziękuję. Twoje zgłoszenie zostało zapisane."
+msgstr ""
+
+#: app/setup.php:1086
+msgid "Nie udało się odczytać konfiguracji kalendarza."
+msgstr ""
+
+#: app/setup.php:1091
+msgid "Nie znaleziono modułu rezerwacji."
+msgstr ""
+
+#: app/setup.php:1096
+msgid "Wybrany moduł nie obsługuje rezerwacji."
+msgstr ""
+
+#: app/setup.php:1109
+msgid "Uzupełnij wszystkie wymagane pola formularza."
+msgstr ""
+
+#: app/setup.php:1113
+msgid "Podaj poprawny adres e-mail."
+msgstr ""
+
+#: app/setup.php:1126
+msgid "Wybrana opcja usługi jest nieprawidłowa."
+msgstr ""
+
+#: app/setup.php:1140
+msgid "Brak dostępnych godzin dla wybranej daty."
+msgstr ""
+
+#: app/setup.php:1143
+msgid "Wybrana godzina nie jest dostępna dla tej daty."
+msgstr ""
+
+#: app/setup.php:1151
+msgid "Wybrana godzina jest już zajęta."
+msgstr ""
+
+#: app/setup.php:1154
+msgid "Wybrana godzina jest chwilowo zarezerwowana."
+msgstr ""
+
+#: app/setup.php:1176
+msgid "Nie udało się zapisać zgłoszenia. Spróbuj ponownie."
+msgstr ""
+
+#: app/setup.php:1211
+msgid "Nie udało się zaktualizować kalendarza terminu."
+msgstr ""

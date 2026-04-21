@@ -51,6 +51,39 @@ add_action('admin_head', function () {
             }
         }
     }
+    $locale = strtolower((string) determine_locale());
+    $isPolish = str_starts_with($locale, 'pl');
+    $tr = static fn (string $en, string $pl): string => $isPolish ? $pl : $en;
+
+    $editorI18n = [
+        'locale' => $isPolish ? 'pl-PL' : 'en-US',
+        'status_available' => $tr('Available', 'Dostępny'),
+        'status_tentative' => $tr('Tentative', 'Wstępna'),
+        'status_booked' => $tr('Booked', 'Zajęty'),
+        'clear_selected' => $tr('Clear selected', 'Wyczyść zaznaczone'),
+        'note_optional' => $tr('Note (optional)', 'Notatka (opcjonalnie)'),
+        'apply_selected' => $tr('Apply to selected', 'Zastosuj do zaznaczonych'),
+        'unselect_all' => $tr('Unselect all', 'Odznacz wszystko'),
+        'time_placeholder' => $tr('Time HH:MM', 'Godzina HH:MM'),
+        'time_add' => $tr('Add time to selected dates', 'Dodaj godzinę do zaznaczonych dni'),
+        'time_remove' => $tr('Remove time from selected dates', 'Usuń godzinę z zaznaczonych dni'),
+        'weekdays' => $isPolish ? ['Pon', 'Wt', 'Śr', 'Czw', 'Pt', 'Sob', 'Nd'] : ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
+        'time_preview_title' => $tr('Hours preview:', 'Podgląd godzin:'),
+        'select_one_date' => $tr('Select one date to preview available hours.', 'Zaznacz jedną datę, aby zobaczyć dostępne godziny.'),
+        'select_single_date' => $tr('Multiple dates selected. Preview works for one date at a time.', 'Zaznaczono kilka dat. Podgląd działa dla jednej daty naraz.'),
+        'no_configured_hours' => $tr('No configured hours.', 'Brak skonfigurowanych godzin.'),
+        'available' => $tr('Available:', 'Dostępne:'),
+        'busy_hold' => $tr('Booked / hold:', 'Zajęte / hold:'),
+        'no_free_hours' => $tr('No free hours', 'Brak wolnych godzin'),
+        'none' => $tr('None', 'Brak'),
+        'summary_selected_prefix' => $tr('Selected dates:', 'Zaznaczono dni:'),
+        'summary_status' => $tr('Status:', 'Status:'),
+        'summary_idle' => $tr('Click dates in the calendar, then choose status and apply. Saved:', 'Kliknij dni w kalendarzu, potem wybierz status i zastosuj. Zapisane:'),
+        'summary_map' => $tr('map', 'mapa'),
+        'summary_ranges' => $tr('ranges', 'zakresy'),
+    ];
+    echo '<script>window.AnimatedEditorI18n=' . wp_json_encode($editorI18n, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) . ';</script>';
+
     echo Vite::withEntryPoints([
         'resources/css/editor.css',
         'resources/js/editor.js',
@@ -81,6 +114,8 @@ add_filter('should_load_separate_core_block_assets', '__return_false');
  * @return void
  */
 add_action('after_setup_theme', function () {
+    load_theme_textdomain('sage', get_template_directory() . '/resources/lang');
+
     /**
      * Disable full-site editing support.
      *
@@ -355,10 +390,10 @@ add_action('manage_booking_request_posts_custom_column', function ($column, $pos
     if ($column === 'abr_status') {
         $status = (string) get_post_meta($postId, '_abr_status', true);
         $label = match ($status) {
-            'hold_48h' => 'Hold aktywny',
-            'expired' => 'Wygasło',
-            'approved' => 'Zatwierdzone',
-            'rejected' => 'Odrzucone',
+            'hold_48h' => __('Hold aktywny', 'sage'),
+            'expired' => __('Wygasło', 'sage'),
+            'approved' => __('Zatwierdzone', 'sage'),
+            'rejected' => __('Odrzucone', 'sage'),
             default => $status !== '' ? $status : '-',
         };
         echo esc_html($label);
@@ -396,7 +431,7 @@ add_filter('post_row_actions', function ($actions, $post) {
             'request_id' => $post->ID,
             'decision' => 'approve',
         ], $base), 'animated_booking_request_decision_'.$post->ID.'_approve', 'abr_nonce');
-        $actions['abr_approve'] = '<a href="'.esc_url($approveUrl).'">Zatwierdź</a>';
+        $actions['abr_approve'] = '<a href="'.esc_url($approveUrl).'">'.esc_html__('Zatwierdź', 'sage').'</a>';
     }
 
     if ($status !== 'rejected') {
@@ -405,7 +440,7 @@ add_filter('post_row_actions', function ($actions, $post) {
             'request_id' => $post->ID,
             'decision' => 'reject',
         ], $base), 'animated_booking_request_decision_'.$post->ID.'_reject', 'abr_nonce');
-        $actions['abr_reject'] = '<a href="'.esc_url($rejectUrl).'">Odrzuć</a>';
+        $actions['abr_reject'] = '<a href="'.esc_url($rejectUrl).'">'.esc_html__('Odrzuć', 'sage').'</a>';
     }
 
     return $actions;
@@ -421,11 +456,11 @@ add_action('admin_notices', function () {
     }
     $decision = isset($_GET['abr_decision']) ? sanitize_key((string) $_GET['abr_decision']) : '';
     if ($decision === 'approved') {
-        echo '<div class="notice notice-success is-dismissible"><p>Status zgłoszenia ustawiono na: Zatwierdzone.</p></div>';
+        echo '<div class="notice notice-success is-dismissible"><p>' . esc_html__('Status zgłoszenia ustawiono na: Zatwierdzone.', 'sage') . '</p></div>';
         return;
     }
     if ($decision === 'rejected') {
-        echo '<div class="notice notice-warning is-dismissible"><p>Status zgłoszenia ustawiono na: Odrzucone.</p></div>';
+        echo '<div class="notice notice-warning is-dismissible"><p>' . esc_html__('Status zgłoszenia ustawiono na: Odrzucone.', 'sage') . '</p></div>';
     }
 });
 

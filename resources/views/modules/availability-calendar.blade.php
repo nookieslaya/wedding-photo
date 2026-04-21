@@ -1,4 +1,8 @@
 @php
+    $currentLocale = strtolower((string) determine_locale());
+    $isPolishLocale = str_starts_with($currentLocale, 'pl');
+    $tr = static fn (string $en, string $pl): string => $isPolishLocale ? $pl : $en;
+
     if (function_exists('\App\animated_cleanup_expired_booking_holds')) {
         \App\animated_cleanup_expired_booking_holds(20);
     }
@@ -178,6 +182,18 @@
     $bookingResult = trim((string) request()->query('booking_request', ''));
     $bookingResultMessage = trim((string) request()->query('booking_message', ''));
     $showBookingResult = $bookingResultModule === $moduleId && in_array($bookingResult, ['success', 'error'], true);
+    $calendarI18n = [
+        'locale' => $isPolishLocale ? 'pl-PL' : 'en-US',
+        'status_available' => $tr('Available', 'Dostępny'),
+        'status_tentative' => $tr('Tentative booking', 'Wstępna rezerwacja'),
+        'status_booked' => $tr('Booked', 'Zajęty'),
+        'status_none' => $tr('No information', 'Brak informacji'),
+        'weekdays' => $isPolishLocale ? ['Pon', 'Wt', 'Śr', 'Czw', 'Pt', 'Sob', 'Nd'] : ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
+        'choose_hour' => $tr('Choose time', 'Wybierz godzinę'),
+        'no_data_month' => $tr('No data for selected month.', 'Brak danych dla wybranego miesiąca.'),
+        'click_day_status' => $tr('Click a day to see status.', 'Kliknij dzień, aby zobaczyć status.'),
+        'hours_prefix' => $tr('Hours:', 'Godziny:'),
+    ];
 @endphp
 
 <section class="availability-calendar-module availability-theme-{{ $themePreset }} availability-bg-{{ $backgroundStyle }} availability-font-{{ $fontPreset }} relative text-white" data-availability-calendar-module>
@@ -218,15 +234,15 @@
                 <div class="mt-8 space-y-2.5 text-[0.72rem] uppercase tracking-[0.14em]">
                     <div class="flex items-center gap-2.5 text-white/78">
                         <span class="h-2.5 w-2.5 rounded-full bg-[#22c55e]"></span>
-                        <span>Dostępny</span>
+                        <span>{{ $tr('Available', 'Dostępny') }}</span>
                     </div>
                     <div class="flex items-center gap-2.5 text-white/78">
                         <span class="h-2.5 w-2.5 rounded-full bg-[#f59e0b]"></span>
-                        <span>Wstępna Rezerwacja</span>
+                        <span>{{ $tr('Tentative Booking', 'Wstępna Rezerwacja') }}</span>
                     </div>
                     <div class="flex items-center gap-2.5 text-white/78">
                         <span class="h-2.5 w-2.5 rounded-full bg-[#ef4444]"></span>
-                        <span>Zajęty</span>
+                        <span>{{ $tr('Booked', 'Zajęty') }}</span>
                     </div>
                 </div>
             </aside>
@@ -239,12 +255,13 @@
                 data-availability-time-default='@json($defaultTimeSlots)'
                 data-availability-time-overrides='@json($timeOverridesDecoded)'
                 data-availability-time-reservations='@json($timeReservationsDecoded)'
+                data-availability-i18n='@json($calendarI18n)'
                 data-availability-months="{{ $monthsToShow }}"
                 data-availability-offset="{{ $startMonthOffset }}">
                 <div class="flex items-center justify-between gap-3 border-b border-white/12 pb-4">
                     <button type="button"
                         class="inline-flex h-9 w-9 items-center justify-center rounded-sm border border-white/22 text-white/85 transition hover:border-white hover:text-white"
-                        data-availability-prev aria-label="Poprzedni miesiąc">
+                        data-availability-prev aria-label="{{ $tr('Previous month', 'Poprzedni miesiąc') }}">
                         ←
                     </button>
                     <h3 class="text-sm font-semibold uppercase tracking-[0.18em] text-white/90"
@@ -253,7 +270,7 @@
                     </h3>
                     <button type="button"
                         class="inline-flex h-9 w-9 items-center justify-center rounded-sm border border-white/22 text-white/85 transition hover:border-white hover:text-white"
-                        data-availability-next aria-label="Następny miesiąc">
+                        data-availability-next aria-label="{{ $tr('Next month', 'Następny miesiąc') }}">
                         →
                     </button>
                 </div>
@@ -263,7 +280,7 @@
                 <div class="mt-2 grid grid-cols-7 gap-1" data-availability-days></div>
 
                 <p class="mt-4 min-h-5 text-[0.72rem] uppercase tracking-[0.1em] text-white/62" data-availability-note>
-                    Kliknij dzień, aby zobaczyć status.
+                    {{ __('Kliknij dzień, aby zobaczyć status.', 'sage') }}
                 </p>
 
                 @if ($showBookingResult)
@@ -281,7 +298,7 @@
                     @if (!empty($bookingOptions))
                         <div class="availability-booking-cta mt-4" data-availability-booking-cta>
                             <button type="button" class="availability-booking-open" data-availability-booking-open>
-                                Zarezerwuj
+                                {{ __('Zarezerwuj', 'sage') }}
                             </button>
                         </div>
 
@@ -298,7 +315,7 @@
                             @php(wp_nonce_field('animated_submit_booking_request', 'booking_nonce'))
 
                             <label class="availability-booking-field">
-                                <span>Data wydarzenia *</span>
+                                <span>{{ __('Data wydarzenia', 'sage') }} *</span>
                                 <input type="text" name="booking_date_display" value="" readonly data-availability-booking-date-display>
                                 <input type="hidden" name="booking_date" value="" data-availability-booking-date>
                             </label>
@@ -306,19 +323,19 @@
                             <label class="availability-booking-field">
                                 <span>Godzina *</span>
                                 <select name="booking_time" required data-availability-booking-time>
-                                    <option value="">Wybierz godzinę</option>
+                                    <option value="">{{ __('Wybierz godzinę', 'sage') }}</option>
                                 </select>
                             </label>
 
                             <label class="availability-booking-field">
-                                <span>Imię i nazwisko *</span>
+                                <span>{{ __('Imię i nazwisko', 'sage') }} *</span>
                                 <input type="text" name="booking_full_name" required maxlength="120" autocomplete="name">
                             </label>
 
                             <label class="availability-booking-field">
-                                <span>Usługa / Pakiet *</span>
+                                <span>{{ __('Usługa / Pakiet', 'sage') }} *</span>
                                 <select name="booking_option" required>
-                                    <option value="">Wybierz</option>
+                                    <option value="">{{ __('Wybierz', 'sage') }}</option>
                                     @foreach ($bookingOptions as $optionLabel)
                                         <option value="{{ $optionLabel }}">{{ $optionLabel }}</option>
                                     @endforeach
@@ -326,17 +343,17 @@
                             </label>
 
                             <label class="availability-booking-field">
-                                <span>Adres e-mail *</span>
+                                <span>{{ __('Adres e-mail', 'sage') }} *</span>
                                 <input type="email" name="booking_email" required maxlength="190" autocomplete="email">
                             </label>
 
                             <label class="availability-booking-field">
-                                <span>Numer telefonu *</span>
+                                <span>{{ __('Numer telefonu', 'sage') }} *</span>
                                 <input type="tel" name="booking_phone" required maxlength="50" autocomplete="tel">
                             </label>
 
                             <label class="availability-booking-field">
-                                <span>Wiadomość</span>
+                                <span>{{ __('Wiadomość', 'sage') }}</span>
                                 <textarea name="booking_message" rows="4" maxlength="1500"></textarea>
                             </label>
 
@@ -351,7 +368,7 @@
                         </form>
                     @else
                         <p class="mt-4 text-sm text-white/70">
-                            Uzupełnij opcje „Usługa / Pakiet” w ustawieniach modułu, aby włączyć formularz rezerwacji.
+                            {{ __('Uzupełnij opcje „Usługa / Pakiet” w ustawieniach modułu, aby włączyć formularz rezerwacji.', 'sage') }}
                         </p>
                     @endif
                 </div>

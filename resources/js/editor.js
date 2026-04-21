@@ -8,6 +8,22 @@ import {
   toDateKey,
 } from './shared/availability-status';
 
+const I18N = window.AnimatedEditorI18n || {};
+const t = (key, fallback) => {
+  const value = I18N[key];
+  return typeof value === 'string' && value.trim() !== '' ? value : fallback;
+};
+const locale = typeof I18N.locale === 'string' && I18N.locale.trim() !== '' ? I18N.locale : 'en-US';
+const tWeekdays = Array.isArray(I18N.weekdays) && I18N.weekdays.length === 7
+  ? I18N.weekdays
+  : ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+const statusLabel = {
+  ...STATUS_LABEL,
+  available: t('status_available', STATUS_LABEL.available),
+  tentative: t('status_tentative', STATUS_LABEL.tentative),
+  booked: t('status_booked', STATUS_LABEL.booked),
+};
+
 const safeJsonParse = (value, fallback) => {
   try {
     return JSON.parse(value);
@@ -151,7 +167,7 @@ const ensureManagerUi = (managerNode) => {
     }
   };
 
-  const monthFormatter = new Intl.DateTimeFormat('pl-PL', {
+  const monthFormatter = new Intl.DateTimeFormat(locale, {
     month: 'long',
     year: 'numeric',
   });
@@ -327,20 +343,20 @@ const ensureManagerUi = (managerNode) => {
       </div>
       <div class="availability-admin-ui__tools">
         <div class="availability-admin-ui__statuses" data-avm-statuses>
-          <button type="button" class="button" data-status=\"available\">Dostępny</button>
-          <button type="button" class="button" data-status=\"tentative\">Wstępna</button>
-          <button type="button" class="button" data-status=\"booked\">Zajęty</button>
+          <button type="button" class="button" data-status=\"available\">${t('status_available', 'Available')}</button>
+          <button type="button" class="button" data-status=\"tentative\">${t('status_tentative', 'Tentative')}</button>
+          <button type="button" class="button" data-status=\"booked\">${t('status_booked', 'Booked')}</button>
         </div>
-        <input type="text" class="availability-admin-ui__note" data-avm-note placeholder="Notatka (opcjonalnie)">
+        <input type="text" class="availability-admin-ui__note" data-avm-note placeholder="${t('note_optional', 'Note (optional)')}">
         <div class="availability-admin-ui__actions">
-          <button type="button" class="button button-primary" data-avm-apply>Zastosuj do zaznaczonych</button>
-          <button type="button" class="button" data-avm-clear>Wyczyść zaznaczone</button>
-          <button type="button" class="button" data-avm-unselect>Odznacz wszystko</button>
+          <button type="button" class="button button-primary" data-avm-apply>${t('apply_selected', 'Apply to selected')}</button>
+          <button type="button" class="button" data-avm-clear>${t('clear_selected', 'Wyczyść zaznaczone')}</button>
+          <button type="button" class="button" data-avm-unselect>${t('unselect_all', 'Unselect all')}</button>
         </div>
         <div class="availability-admin-ui__time-tools">
-          <input type="text" class="availability-admin-ui__time-input" data-avm-time-slot placeholder="Godzina HH:MM">
-          <button type="button" class="button" data-avm-time-add>Dodaj godzinę do zaznaczonych dni</button>
-          <button type="button" class="button" data-avm-time-remove>Usuń godzinę z zaznaczonych dni</button>
+          <input type="text" class="availability-admin-ui__time-input" data-avm-time-slot placeholder="${t('time_placeholder', 'Time HH:MM')}">
+          <button type="button" class="button" data-avm-time-add>${t('time_add', 'Add time to selected dates')}</button>
+          <button type="button" class="button" data-avm-time-remove>${t('time_remove', 'Remove time from selected dates')}</button>
         </div>
         <div class="availability-admin-ui__time-preview" data-avm-time-preview></div>
       </div>
@@ -372,7 +388,7 @@ const ensureManagerUi = (managerNode) => {
     return;
   }
 
-  weekdays.innerHTML = ['Pon', 'Wt', 'Śr', 'Czw', 'Pt', 'Sob', 'Nd']
+  weekdays.innerHTML = tWeekdays
     .map((label) => `<div>${label}</div>`)
     .join('');
 
@@ -421,27 +437,27 @@ const ensureManagerUi = (managerNode) => {
 
   const renderTimePreview = () => {
     if (state.selectedDates.size === 0) {
-      timePreview.innerHTML = '<strong>Podgląd godzin:</strong> Zaznacz jedną datę, aby zobaczyć dostępne godziny.';
+      timePreview.innerHTML = `<strong>${t('time_preview_title', 'Hours preview:')}</strong> ${t('select_one_date', 'Select one date to preview available hours.')}`;
       return;
     }
     if (state.selectedDates.size > 1) {
-      timePreview.innerHTML = '<strong>Podgląd godzin:</strong> Zaznaczono kilka dat. Podgląd działa dla jednej daty naraz.';
+      timePreview.innerHTML = `<strong>${t('time_preview_title', 'Hours preview:')}</strong> ${t('select_single_date', 'Multiple dates selected. Preview works for one date at a time.')}`;
       return;
     }
 
     const [dateKey] = [...state.selectedDates];
     const configured = getDateSlots(dateKey);
     if (configured.length === 0) {
-      timePreview.innerHTML = `<strong>Podgląd godzin dla ${dateKey}:</strong> Brak skonfigurowanych godzin.`;
+      timePreview.innerHTML = `<strong>${t('time_preview_title', 'Hours preview:')} ${dateKey}</strong> ${t('no_configured_hours', 'No configured hours.')}`;
       return;
     }
     const reserved = getReservedSlots(dateKey);
     const available = configured.filter((slot) => !reserved.has(slot));
     const reservedList = configured.filter((slot) => reserved.has(slot));
     timePreview.innerHTML = `
-      <strong>Podgląd godzin dla ${dateKey}:</strong><br>
-      <span><strong>Dostępne:</strong> ${available.length ? available.join(', ') : 'Brak wolnych godzin'}</span><br>
-      <span><strong>Zajęte / hold:</strong> ${reservedList.length ? reservedList.join(', ') : 'Brak'}</span>
+      <strong>${t('time_preview_title', 'Hours preview:')} ${dateKey}</strong><br>
+      <span><strong>${t('available', 'Available:')}</strong> ${available.length ? available.join(', ') : t('no_free_hours', 'No free hours')}</span><br>
+      <span><strong>${t('busy_hold', 'Booked / hold:')}</strong> ${reservedList.length ? reservedList.join(', ') : t('none', 'None')}</span>
     `;
   };
 
@@ -449,8 +465,8 @@ const ensureManagerUi = (managerNode) => {
     const selectedCount = state.selectedDates.size;
     const totalMapped = Object.keys(state.dayMap).length;
     summary.textContent = selectedCount > 0
-      ? `Zaznaczono dni: ${selectedCount} · Status: ${STATUS_LABEL[state.selectedStatus]}`
-      : `Kliknij dni w kalendarzu, potem wybierz status i zastosuj. Zapisane: ${totalMapped} (mapa: ${state.mapCount || 0}, zakresy: ${state.repeaterCount || 0})`;
+      ? `${t('summary_selected_prefix', 'Selected dates:')} ${selectedCount} · ${t('summary_status', 'Status:')} ${statusLabel[state.selectedStatus]}`
+      : `${t('summary_idle', 'Click dates in the calendar, then choose status and apply. Saved:')} ${totalMapped} (${t('summary_map', 'map')}: ${state.mapCount || 0}, ${t('summary_ranges', 'ranges')}: ${state.repeaterCount || 0})`;
     renderTimePreview();
   };
 
@@ -525,7 +541,7 @@ const ensureManagerUi = (managerNode) => {
       return;
     }
     const status = statusButton.dataset.status;
-    if (status && Object.prototype.hasOwnProperty.call(STATUS_LABEL, status)) {
+    if (status && Object.prototype.hasOwnProperty.call(statusLabel, status)) {
       state.selectedStatus = status;
       updateStatusButtons();
       renderSummary();

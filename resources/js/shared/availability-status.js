@@ -5,10 +5,10 @@ export const STATUS_PRIORITY = {
 };
 
 export const STATUS_LABEL = {
-  available: 'Dostępny',
-  tentative: 'Wstępna rezerwacja',
-  booked: 'Zajęty',
-  none: 'Brak informacji',
+  available: 'Available',
+  tentative: 'Tentative',
+  booked: 'Booked',
+  none: 'No information',
 };
 
 export const parseDate = (value) => {

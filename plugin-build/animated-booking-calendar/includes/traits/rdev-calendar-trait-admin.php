@@ -75,6 +75,28 @@ trait Rdev_Calendar_Admin_Trait {
         $admin_js_ver = file_exists($admin_js_path) ? (string) filemtime($admin_js_path) : self::VERSION;
         wp_enqueue_style('abc-admin', $base . 'css/admin.css', [], $admin_css_ver);
         wp_enqueue_script('abc-admin', $base . 'js/admin.js', [], $admin_js_ver, true);
+        wp_localize_script('abc-admin', 'abcAdminI18n', [
+            'status_available' => __('Dostępny', 'rdev-calendar'),
+            'status_tentative' => __('Wstępna', 'rdev-calendar'),
+            'status_booked' => __('Zajęty', 'rdev-calendar'),
+            'clear_selected' => __('Wyczyść zaznaczone', 'rdev-calendar'),
+            'time_placeholder' => __('Godzina HH:MM', 'rdev-calendar'),
+            'time_add' => __('Dodaj godzinę do zaznaczonych dni', 'rdev-calendar'),
+            'time_remove' => __('Usuń godzinę z zaznaczonych dni', 'rdev-calendar'),
+            'weekdays' => [__('Pon', 'rdev-calendar'), __('Wt', 'rdev-calendar'), __('Śr', 'rdev-calendar'), __('Czw', 'rdev-calendar'), __('Pt', 'rdev-calendar'), __('Sob', 'rdev-calendar'), __('Nd', 'rdev-calendar')],
+            'time_preview_title' => __('Podgląd godzin:', 'rdev-calendar'),
+            'select_one_date' => __('Zaznacz jedną datę, aby zobaczyć dostępne godziny.', 'rdev-calendar'),
+            'select_single_date' => __('Zaznaczono kilka dat. Podgląd działa dla jednej daty naraz.', 'rdev-calendar'),
+            'no_configured_hours' => __('Brak skonfigurowanych godzin.', 'rdev-calendar'),
+            'available' => __('Dostępne:', 'rdev-calendar'),
+            'busy_hold' => __('Zajęte / hold:', 'rdev-calendar'),
+            'no_free_hours' => __('Brak wolnych godzin', 'rdev-calendar'),
+            'none' => __('Brak', 'rdev-calendar'),
+            'summary_selected_prefix' => __('Zaznaczono:', 'rdev-calendar'),
+            'summary_status' => __('Status:', 'rdev-calendar'),
+            'summary_idle' => __('Kliknij dni i zastosuj status. Zapisane:', 'rdev-calendar'),
+            'summary_overrides' => __('Nadpisania godzin:', 'rdev-calendar'),
+        ]);
     }
 
     public static function request_columns(array $columns): array {

@@ -4,13 +4,17 @@ namespace App;
 
 use StoutLogic\AcfBuilder\FieldsBuilder;
 
+$acfLocale = strtolower((string) determine_locale());
+$acfIsPolish = str_starts_with($acfLocale, 'pl');
+$acfTr = static fn (string $en, string $pl): string => $acfIsPolish ? $pl : $en;
+
 $aboutUs = new FieldsBuilder('about-us', [
     'label' => 'About Us',
 ]);
 
 $aboutUs
     ->addText('section_title', [
-        'label' => 'Section title',
+        'label' => $acfTr('Section title', 'Tytuł sekcji'),
     ])
         ->setWidth(30)
     ->addText('heading', [

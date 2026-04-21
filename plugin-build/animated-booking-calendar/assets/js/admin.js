@@ -1,8 +1,17 @@
 (() => {
+  const I18N = window.abcAdminI18n || {};
+  const t = (key, fallback) => {
+    const value = I18N[key];
+    return typeof value === 'string' && value.trim() !== '' ? value : fallback;
+  };
+  const tWeekdays = Array.isArray(I18N.weekdays) && I18N.weekdays.length === 7
+    ? I18N.weekdays
+    : ['Pon', 'Wt', 'Śr', 'Czw', 'Pt', 'Sob', 'Nd'];
+
   const STATUSS = [
-    ['available', 'Dostępny'],
-    ['tentative', 'Wstępna'],
-    ['booked', 'Zajęty'],
+    ['available', t('status_available', 'Dostępny')],
+    ['tentative', t('status_tentative', 'Wstępna')],
+    ['booked', t('status_booked', 'Zajęty')],
   ];
 
   const parseMap = (raw) => {
@@ -149,17 +158,17 @@
           <input type="text" data-note placeholder="Notatka (opcjonalnie)">
           <div class="abc-admin-actions">
             <button type="button" class="button button-primary" data-apply>Zastosuj do zaznaczonych</button>
-            <button type="button" class="button" data-clear>Wyczyść zaznaczone</button>
+            <button type="button" class="button" data-clear>${t('clear_selected', 'Wyczyść zaznaczone')}</button>
             <button type="button" class="button" data-unselect>Odznacz wszystko</button>
           </div>
           <div class="abc-admin-time-tools">
-            <input type="text" data-time-slot placeholder="Godzina HH:MM">
-            <button type="button" class="button" data-time-add>Dodaj godzinę do zaznaczonych dni</button>
-            <button type="button" class="button" data-time-remove>Usuń godzinę z zaznaczonych dni</button>
+            <input type="text" data-time-slot placeholder="${t('time_placeholder', 'Godzina HH:MM')}">
+            <button type="button" class="button" data-time-add>${t('time_add', 'Dodaj godzinę do zaznaczonych dni')}</button>
+            <button type="button" class="button" data-time-remove>${t('time_remove', 'Usuń godzinę z zaznaczonych dni')}</button>
           </div>
           <div class="abc-admin-time-preview" data-time-preview></div>
         </div>
-        <div class="abc-admin-weekdays">${['Pon','Wt','Śr','Czw','Pt','Sob','Nd'].map((d)=>`<div>${d}</div>`).join('')}</div>
+        <div class="abc-admin-weekdays">${tWeekdays.map((d)=>`<div>${d}</div>`).join('')}</div>
         <div class="abc-admin-days" data-days></div>
         <p class="abc-admin-summary" data-summary></p>
       </div>
@@ -228,31 +237,31 @@
     const renderTimePreview = () => {
       if (!(timePreview instanceof HTMLElement)) return;
       if (state.selectedDates.size === 0) {
-        timePreview.innerHTML = '<strong>Podgląd godzin:</strong> Zaznacz jedną datę, aby zobaczyć dostępne godziny.';
+        timePreview.innerHTML = `<strong>${t('time_preview_title', 'Podgląd godzin:')}</strong> ${t('select_one_date', 'Zaznacz jedną datę, aby zobaczyć dostępne godziny.')}`;
         return;
       }
       if (state.selectedDates.size > 1) {
-        timePreview.innerHTML = '<strong>Podgląd godzin:</strong> Zaznaczono kilka dat. Podgląd działa dla jednej daty naraz.';
+        timePreview.innerHTML = `<strong>${t('time_preview_title', 'Podgląd godzin:')}</strong> ${t('select_single_date', 'Zaznaczono kilka dat. Podgląd działa dla jednej daty naraz.')}`;
         return;
       }
 
       const [dateKey] = [...state.selectedDates];
       const configured = getDateSlots(dateKey);
       if (configured.length === 0) {
-        timePreview.innerHTML = `<strong>Podgląd godzin dla ${dateKey}:</strong> Brak skonfigurowanych godzin.`;
+        timePreview.innerHTML = `<strong>${t('time_preview_title', 'Podgląd godzin:')} ${dateKey}</strong> ${t('no_configured_hours', 'Brak skonfigurowanych godzin.')}`;
         return;
       }
 
       const reserved = getReservedSlots(dateKey);
       const available = configured.filter((slot) => !reserved.has(slot));
-      const availableHtml = available.length > 0 ? available.join(', ') : 'Brak wolnych godzin';
+      const availableHtml = available.length > 0 ? available.join(', ') : t('no_free_hours', 'Brak wolnych godzin');
       const reservedList = configured.filter((slot) => reserved.has(slot));
-      const reservedHtml = reservedList.length > 0 ? reservedList.join(', ') : 'Brak';
+      const reservedHtml = reservedList.length > 0 ? reservedList.join(', ') : t('none', 'Brak');
 
       timePreview.innerHTML = `
-        <strong>Podgląd godzin dla ${dateKey}:</strong><br>
-        <span><strong>Dostępne:</strong> ${availableHtml}</span><br>
-        <span><strong>Zajęte / hold:</strong> ${reservedHtml}</span>
+        <strong>${t('time_preview_title', 'Podgląd godzin:')} ${dateKey}</strong><br>
+        <span><strong>${t('available', 'Dostępne:')}</strong> ${availableHtml}</span><br>
+        <span><strong>${t('busy_hold', 'Zajęte / hold:')}</strong> ${reservedHtml}</span>
       `;
     };
 
@@ -261,8 +270,8 @@
       const total = Object.keys(state.map).length;
       const overrides = Object.keys(state.timeOverrides).length;
       summary.textContent = selectedCount > 0
-        ? `Zaznaczono: ${selectedCount} · Status: ${state.selectedStatus}`
-        : `Kliknij dni i zastosuj status. Zapisane: ${total} · Nadpisania godzin: ${overrides}`;
+        ? `${t('summary_selected_prefix', 'Zaznaczono:')} ${selectedCount} · ${t('summary_status', 'Status:')} ${state.selectedStatus}`
+        : `${t('summary_idle', 'Kliknij dni i zastosuj status. Zapisane:')} ${total} · ${t('summary_overrides', 'Nadpisania godzin:')} ${overrides}`;
       renderTimePreview();
     };
 
