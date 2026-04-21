@@ -9,7 +9,6 @@ import { initFooterEffectsModule } from './modules/footer-effects';
 import { initScrollIndicatorModule } from './modules/scroll-indicator';
 import { initOfferModule } from './modules/offer';
 import { initProductsModule } from './modules/products';
-import { initAvailabilityCalendarModule } from './modules/availability-calendar';
 import { initPostsModule } from './modules/posts';
 
 const safeInit = (name, fn) => {
@@ -32,7 +31,6 @@ const boot = () => {
   safeInit('scroll-indicator', initScrollIndicatorModule);
   safeInit('offer', initOfferModule);
   safeInit('products', initProductsModule);
-  safeInit('availability-calendar', initAvailabilityCalendarModule);
   safeInit('posts', initPostsModule);
   window.__animatedThemeBooted = true;
 };

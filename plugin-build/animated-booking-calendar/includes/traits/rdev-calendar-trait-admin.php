@@ -9,11 +9,19 @@ trait Rdev_Calendar_Admin_Trait {
     public static function register_post_types(): void {
         register_post_type(self::CALENDAR_CPT, [
             'labels' => [
-                'name' => __('Calendars', 'rdev-calendar'),
-                'singular_name' => __('Calendar', 'rdev-calendar'),
-                'add_new_item' => __('Add calendar', 'rdev-calendar'),
-                'edit_item' => __('Edit calendar', 'rdev-calendar'),
-                'all_items' => __('Calendars', 'rdev-calendar'),
+                'name' => self::tr('Calendars', 'Kalendarze'),
+                'singular_name' => self::tr('Calendar', 'Kalendarz'),
+                'menu_name' => self::tr('Calendars', 'Kalendarze'),
+                'name_admin_bar' => self::tr('Calendar', 'Kalendarz'),
+                'add_new' => self::tr('Add new', 'Dodaj nowy'),
+                'add_new_item' => self::tr('Add calendar', 'Dodaj kalendarz'),
+                'edit_item' => self::tr('Edit calendar', 'Edytuj kalendarz'),
+                'new_item' => self::tr('New calendar', 'Nowy kalendarz'),
+                'view_item' => self::tr('View calendar', 'Zobacz kalendarz'),
+                'search_items' => self::tr('Search calendars', 'Szukaj kalendarzy'),
+                'not_found' => self::tr('No calendars found', 'Nie znaleziono kalendarzy'),
+                'not_found_in_trash' => self::tr('No calendars found in Trash', 'Brak kalendarzy w koszu'),
+                'all_items' => self::tr('Calendars', 'Kalendarze'),
             ],
             'public' => false,
             'show_ui' => true,
@@ -25,9 +33,19 @@ trait Rdev_Calendar_Admin_Trait {
 
         register_post_type(self::REQUEST_CPT, [
             'labels' => [
-                'name' => __('Booking Requests', 'rdev-calendar'),
-                'singular_name' => __('Booking Request', 'rdev-calendar'),
-                'all_items' => __('Booking Requests', 'rdev-calendar'),
+                'name' => self::tr('Booking Requests', 'Zapytania rezerwacji'),
+                'singular_name' => self::tr('Booking Request', 'Zapytanie rezerwacji'),
+                'menu_name' => self::tr('Booking Requests', 'Zapytania rezerwacji'),
+                'name_admin_bar' => self::tr('Booking Request', 'Zapytanie rezerwacji'),
+                'add_new' => self::tr('Add new', 'Dodaj nowe'),
+                'add_new_item' => self::tr('Add booking request', 'Dodaj zapytanie rezerwacji'),
+                'edit_item' => self::tr('Edit booking request', 'Edytuj zapytanie rezerwacji'),
+                'new_item' => self::tr('New booking request', 'Nowe zapytanie rezerwacji'),
+                'view_item' => self::tr('View booking request', 'Zobacz zapytanie rezerwacji'),
+                'search_items' => self::tr('Search booking requests', 'Szukaj zapytań rezerwacji'),
+                'not_found' => self::tr('No booking requests found', 'Nie znaleziono zapytań rezerwacji'),
+                'not_found_in_trash' => self::tr('No booking requests found in Trash', 'Brak zapytań rezerwacji w koszu'),
+                'all_items' => self::tr('Booking Requests', 'Zapytania rezerwacji'),
             ],
             'public' => false,
             'show_ui' => true,
@@ -41,7 +59,7 @@ trait Rdev_Calendar_Admin_Trait {
     public static function register_meta_boxes(): void {
         add_meta_box(
             'abc_calendar_settings',
-            __('Calendar settings', 'rdev-calendar'),
+            self::tr('Calendar settings', 'Ustawienia kalendarza'),
             [self::class, 'render_settings_metabox'],
             self::CALENDAR_CPT,
             'normal',
@@ -50,7 +68,7 @@ trait Rdev_Calendar_Admin_Trait {
 
         add_meta_box(
             'abc_calendar_availability',
-            __('Availability manager', 'rdev-calendar'),
+            self::tr('Availability manager', 'Menedżer dostępności'),
             [self::class, 'render_availability_metabox'],
             self::CALENDAR_CPT,
             'normal',
@@ -75,41 +93,50 @@ trait Rdev_Calendar_Admin_Trait {
         $admin_js_ver = file_exists($admin_js_path) ? (string) filemtime($admin_js_path) : self::VERSION;
         wp_enqueue_style('abc-admin', $base . 'css/admin.css', [], $admin_css_ver);
         wp_enqueue_script('abc-admin', $base . 'js/admin.js', [], $admin_js_ver, true);
+        $is_pl = self::is_polish_locale();
         wp_localize_script('abc-admin', 'abcAdminI18n', [
-            'status_available' => __('Dostępny', 'rdev-calendar'),
-            'status_tentative' => __('Wstępna', 'rdev-calendar'),
-            'status_booked' => __('Zajęty', 'rdev-calendar'),
-            'clear_selected' => __('Wyczyść zaznaczone', 'rdev-calendar'),
-            'time_placeholder' => __('Godzina HH:MM', 'rdev-calendar'),
-            'time_add' => __('Dodaj godzinę do zaznaczonych dni', 'rdev-calendar'),
-            'time_remove' => __('Usuń godzinę z zaznaczonych dni', 'rdev-calendar'),
-            'weekdays' => [__('Pon', 'rdev-calendar'), __('Wt', 'rdev-calendar'), __('Śr', 'rdev-calendar'), __('Czw', 'rdev-calendar'), __('Pt', 'rdev-calendar'), __('Sob', 'rdev-calendar'), __('Nd', 'rdev-calendar')],
-            'time_preview_title' => __('Podgląd godzin:', 'rdev-calendar'),
-            'select_one_date' => __('Zaznacz jedną datę, aby zobaczyć dostępne godziny.', 'rdev-calendar'),
-            'select_single_date' => __('Zaznaczono kilka dat. Podgląd działa dla jednej daty naraz.', 'rdev-calendar'),
-            'no_configured_hours' => __('Brak skonfigurowanych godzin.', 'rdev-calendar'),
-            'available' => __('Dostępne:', 'rdev-calendar'),
-            'busy_hold' => __('Zajęte / hold:', 'rdev-calendar'),
-            'no_free_hours' => __('Brak wolnych godzin', 'rdev-calendar'),
-            'none' => __('Brak', 'rdev-calendar'),
-            'summary_selected_prefix' => __('Zaznaczono:', 'rdev-calendar'),
-            'summary_status' => __('Status:', 'rdev-calendar'),
-            'summary_idle' => __('Kliknij dni i zastosuj status. Zapisane:', 'rdev-calendar'),
-            'summary_overrides' => __('Nadpisania godzin:', 'rdev-calendar'),
+            'locale' => self::locale_tag(),
+            'status_available' => self::tr('Available', 'Dostępny'),
+            'status_tentative' => self::tr('Tentative', 'Wstępna'),
+            'status_booked' => self::tr('Booked', 'Zajęty'),
+            'clear_selected' => self::tr('Clear selected', 'Wyczyść zaznaczone'),
+            'time_placeholder' => self::tr('Time HH:MM', 'Godzina HH:MM'),
+            'time_add' => self::tr('Add time to selected dates', 'Dodaj godzinę do zaznaczonych dni'),
+            'time_remove' => self::tr('Remove time from selected dates', 'Usuń godzinę z zaznaczonych dni'),
+            'weekdays' => $is_pl ? ['Pon', 'Wt', 'Śr', 'Czw', 'Pt', 'Sob', 'Nd'] : ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
+            'time_preview_title' => self::tr('Hours preview:', 'Podgląd godzin:'),
+            'select_one_date' => self::tr('Select one date to preview available hours.', 'Zaznacz jedną datę, aby zobaczyć dostępne godziny.'),
+            'select_single_date' => self::tr('Multiple dates selected. Preview works for one date at a time.', 'Zaznaczono kilka dat. Podgląd działa dla jednej daty naraz.'),
+            'no_configured_hours' => self::tr('No configured hours.', 'Brak skonfigurowanych godzin.'),
+            'available' => self::tr('Available:', 'Dostępne:'),
+            'busy_hold' => self::tr('Booked / hold:', 'Zajęte / hold:'),
+            'no_free_hours' => self::tr('No free hours', 'Brak wolnych godzin'),
+            'none' => self::tr('None', 'Brak'),
+            'summary_selected_prefix' => self::tr('Selected:', 'Zaznaczono:'),
+            'summary_status' => self::tr('Status:', 'Status:'),
+            'summary_idle' => self::tr('Click days and apply status. Saved:', 'Kliknij dni i zastosuj status. Zapisane:'),
+            'summary_overrides' => self::tr('Time overrides:', 'Nadpisania godzin:'),
+            'note_optional' => self::tr('Note (optional)', 'Notatka (opcjonalnie)'),
+            'apply_selected' => self::tr('Apply to selected', 'Zastosuj do zaznaczonych'),
+            'unselect_all' => self::tr('Unselect all', 'Odznacz wszystko'),
+            'mode_slots' => self::tr('Hours', 'Godziny'),
+            'mode_all_day' => self::tr('Full day', 'Cały dzień'),
+            'locked_dates_skipped' => self::tr('Some selected dates are locked by active reservations and were skipped ({count}).', 'Część zaznaczonych dat jest zablokowana aktywnymi rezerwacjami i została pominięta ({count}).'),
+            'locked_date_click_info' => self::tr('This date is locked by an active reservation. To release it, go to Booking Requests and use "Release date".', 'Ta data jest zablokowana aktywną rezerwacją. Aby ją zwolnić, przejdź do Zapytania rezerwacji i użyj akcji „Zwolnij termin”.'),
         ]);
     }
 
     public static function request_columns(array $columns): array {
         return [
             'cb' => $columns['cb'] ?? '<input type="checkbox" />',
-            'title' => __('Request', 'rdev-calendar'),
-            'abc_date' => __('Date', 'rdev-calendar'),
-            'abc_time' => __('Time', 'rdev-calendar'),
-            'abc_option' => __('Service / Package', 'rdev-calendar'),
-            'abc_contact' => __('Contact', 'rdev-calendar'),
-            'abc_status' => __('Status', 'rdev-calendar'),
-            'abc_hold' => __('Hold to', 'rdev-calendar'),
-            'date' => $columns['date'] ?? __('Created', 'rdev-calendar'),
+            'title' => self::tr('Request', 'Zapytanie'),
+            'abc_date' => self::tr('Date', 'Data'),
+            'abc_time' => self::tr('Time', 'Godzina'),
+            'abc_option' => self::tr('Service / Package', 'Usługa / Pakiet'),
+            'abc_contact' => self::tr('Contact', 'Kontakt'),
+            'abc_status' => self::tr('Status', 'Status'),
+            'abc_hold' => self::tr('Hold to', 'Blokada do'),
+            'date' => $columns['date'] ?? self::tr('Created', 'Utworzono'),
         ];
     }
 
@@ -134,7 +161,7 @@ trait Rdev_Calendar_Admin_Trait {
                 'request_id' => $post->ID,
                 'decision' => 'approve',
             ], $base), 'abc_request_decision_' . $post->ID . '_approve', 'abc_nonce');
-            $actions['abc_approve'] = '<a href="' . esc_url($approve_url) . '">Zatwierdź</a>';
+            $actions['abc_approve'] = '<a href="' . esc_url($approve_url) . '">' . esc_html(self::tr('Approve', 'Zatwierdź')) . '</a>';
         }
 
         if ($status !== 'rejected') {
@@ -143,7 +170,7 @@ trait Rdev_Calendar_Admin_Trait {
                 'request_id' => $post->ID,
                 'decision' => 'reject',
             ], $base), 'abc_request_decision_' . $post->ID . '_reject', 'abc_nonce');
-            $actions['abc_reject'] = '<a href="' . esc_url($reject_url) . '">Odrzuć</a>';
+            $actions['abc_reject'] = '<a href="' . esc_url($reject_url) . '">' . esc_html($status === 'approved' ? self::tr('Release date', 'Zwolnij termin') : self::tr('Reject', 'Odrzuć')) . '</a>';
         }
 
         return $actions;
@@ -176,6 +203,7 @@ trait Rdev_Calendar_Admin_Trait {
         }
 
         $calendar_id = (int) get_post_meta($request_id, '_abc_calendar_id', true);
+        $previous_status = (string) get_post_meta($request_id, '_abc_status', true);
         $date = sanitize_text_field((string) get_post_meta($request_id, '_abc_date', true));
         $time_slot = sanitize_text_field((string) get_post_meta($request_id, '_abc_time', true));
         $full_name = sanitize_text_field((string) get_post_meta($request_id, '_abc_full_name', true));
@@ -189,7 +217,7 @@ trait Rdev_Calendar_Admin_Trait {
         if ($decision === 'approve') {
             update_post_meta($request_id, '_abc_status', 'approved');
 
-            if ($calendar_id > 0 && preg_match('/^\d{4}-\d{2}-\d{2}$/', $date) && preg_match('/^(?:[01]\d|2[0-3]):[0-5]\d$/', $time_slot)) {
+            if ($calendar_id > 0 && preg_match('/^\d{4}-\d{2}-\d{2}$/', $date) && (preg_match('/^(?:[01]\d|2[0-3]):[0-5]\d$/', $time_slot) || $time_slot === 'ALL_DAY')) {
                 $time_reservations[$date][$time_slot] = [
                     'status' => 'booked',
                     'expires_at' => 0,
@@ -204,9 +232,9 @@ trait Rdev_Calendar_Admin_Trait {
                 $ctx = [
                     'full_name' => $full_name,
                     'date' => $date,
-                    'time' => $time_slot,
+                    'time' => $time_slot === 'ALL_DAY' ? self::tr('Full day', 'Cały dzień') : $time_slot,
                     'option' => $option,
-                    'status' => 'Zatwierdzona',
+                    'status' => self::tr('Approved', 'Zatwierdzona'),
                     'site_name' => get_bloginfo('name'),
                 ];
                 $subject = self::replace_tokens((string) $settings['booking_client_approved_email_subject'], $ctx);
@@ -216,7 +244,7 @@ trait Rdev_Calendar_Admin_Trait {
         } else {
             update_post_meta($request_id, '_abc_status', 'rejected');
 
-            if ($calendar_id > 0 && preg_match('/^\d{4}-\d{2}-\d{2}$/', $date) && preg_match('/^(?:[01]\d|2[0-3]):[0-5]\d$/', $time_slot)) {
+            if ($calendar_id > 0 && preg_match('/^\d{4}-\d{2}-\d{2}$/', $date) && (preg_match('/^(?:[01]\d|2[0-3]):[0-5]\d$/', $time_slot) || $time_slot === 'ALL_DAY')) {
                 if (isset($time_reservations[$date][$time_slot]) && (int) ($time_reservations[$date][$time_slot]['request_id'] ?? 0) === $request_id) {
                     unset($time_reservations[$date][$time_slot]);
                     if (empty($time_reservations[$date])) {
@@ -232,9 +260,9 @@ trait Rdev_Calendar_Admin_Trait {
                 $ctx = [
                     'full_name' => $full_name,
                     'date' => $date,
-                    'time' => $time_slot,
+                    'time' => $time_slot === 'ALL_DAY' ? self::tr('Full day', 'Cały dzień') : $time_slot,
                     'option' => $option,
-                    'status' => 'Odrzucona',
+                    'status' => self::tr('Rejected', 'Odrzucona'),
                     'site_name' => get_bloginfo('name'),
                 ];
                 $subject = self::replace_tokens((string) $settings['booking_client_rejected_email_subject'], $ctx);
@@ -247,7 +275,10 @@ trait Rdev_Calendar_Admin_Trait {
         if (! is_string($back) || $back === '') {
             $back = admin_url('edit.php?post_type=' . self::REQUEST_CPT);
         }
-        $url = add_query_arg('abc_decision', $decision === 'approve' ? 'approved' : 'rejected', $back);
+        $decision_key = $decision === 'approve'
+            ? 'approved'
+            : ($previous_status === 'approved' ? 'released' : 'rejected');
+        $url = add_query_arg('abc_decision', $decision_key, $back);
         wp_safe_redirect($url);
         exit;
     }
@@ -267,7 +298,7 @@ trait Rdev_Calendar_Admin_Trait {
             if ($post_id > 0 && $message > 0) {
                 $shortcode = '[rdev_calendar id="' . $post_id . '"]';
                 $alias_shortcode = '[rdev_booking_calendar id="' . $post_id . '"]';
-                echo '<div class="notice notice-success"><p><strong>Calendar shortcode:</strong> <code>' . esc_html($shortcode) . '</code></p><p><small>Alias: <code>' . esc_html($alias_shortcode) . '</code></small></p></div>';
+                echo '<div class="notice notice-success"><p><strong>' . esc_html(self::tr('Calendar shortcode:', 'Shortcode kalendarza:')) . '</strong> <code>' . esc_html($shortcode) . '</code></p><p><small>' . esc_html(self::tr('Alias:', 'Alias:')) . ' <code>' . esc_html($alias_shortcode) . '</code></small></p></div>';
             }
             return;
         }
@@ -278,11 +309,15 @@ trait Rdev_Calendar_Admin_Trait {
 
         $decision = isset($_GET['abc_decision']) ? sanitize_key((string) $_GET['abc_decision']) : '';
         if ($decision === 'approved') {
-            echo '<div class="notice notice-success is-dismissible"><p>Status zgłoszenia ustawiono na: Zatwierdzone.</p></div>';
+            echo '<div class="notice notice-success is-dismissible"><p>' . esc_html(self::tr('Request status changed to: Approved.', 'Status zgłoszenia ustawiono na: Zatwierdzone.')) . '</p></div>';
             return;
         }
         if ($decision === 'rejected') {
-            echo '<div class="notice notice-warning is-dismissible"><p>Status zgłoszenia ustawiono na: Odrzucone.</p></div>';
+            echo '<div class="notice notice-warning is-dismissible"><p>' . esc_html(self::tr('Request status changed to: Rejected.', 'Status zgłoszenia ustawiono na: Odrzucone.')) . '</p></div>';
+            return;
+        }
+        if ($decision === 'released') {
+            echo '<div class="notice notice-success is-dismissible"><p>' . esc_html(self::tr('Booking released. Date is available again.', 'Termin został zwolniony. Data jest ponownie dostępna.')) . '</p></div>';
         }
     }
 
@@ -296,7 +331,8 @@ trait Rdev_Calendar_Admin_Trait {
             return;
         }
         if ($column === 'abc_time') {
-            echo esc_html((string) get_post_meta($post_id, '_abc_time', true));
+            $time = (string) get_post_meta($post_id, '_abc_time', true);
+            echo esc_html($time === 'ALL_DAY' ? self::tr('Full day', 'Cały dzień') : $time);
             return;
         }
         if ($column === 'abc_contact') {
@@ -312,13 +348,13 @@ trait Rdev_Calendar_Admin_Trait {
         if ($column === 'abc_status') {
             $status = (string) get_post_meta($post_id, '_abc_status', true);
             if ($status === 'hold') {
-                $label = 'Hold aktywny';
+                $label = self::tr('Hold active', 'Hold aktywny');
             } elseif ($status === 'approved') {
-                $label = 'Zatwierdzone';
+                $label = self::tr('Approved', 'Zatwierdzone');
             } elseif ($status === 'rejected') {
-                $label = 'Odrzucone';
+                $label = self::tr('Rejected', 'Odrzucone');
             } elseif ($status === 'expired') {
-                $label = 'Wygasło';
+                $label = self::tr('Expired', 'Wygasło');
             } else {
                 $label = $status !== '' ? $status : '—';
             }

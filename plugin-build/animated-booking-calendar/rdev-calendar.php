@@ -5,10 +5,28 @@
  * Version: 2.2.0
  * Author: rdev.website
  * Text Domain: rdev-calendar
+ * Requires PHP: 7.1
  */
 
 if (! defined('ABSPATH')) {
     exit;
+}
+
+if (! function_exists('str_starts_with')) {
+    /**
+     * PHP < 8.0 compatibility polyfill.
+     *
+     * @param string $haystack
+     * @param string $needle
+     */
+    function str_starts_with($haystack, $needle) {
+        $haystack = (string) $haystack;
+        $needle = (string) $needle;
+        if ($needle === '') {
+            return true;
+        }
+        return substr($haystack, 0, strlen($needle)) === $needle;
+    }
 }
 
 add_action('plugins_loaded', static function () {

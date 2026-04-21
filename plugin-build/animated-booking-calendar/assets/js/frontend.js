@@ -4,15 +4,16 @@
     const value = I18N[key];
     return typeof value === 'string' && value.trim() !== '' ? value : fallback;
   };
+  const locale = typeof I18N.locale === 'string' && I18N.locale.trim() !== '' ? I18N.locale : 'en-US';
   const tWeekdays = Array.isArray(I18N.weekdays) && I18N.weekdays.length === 7
     ? I18N.weekdays
-    : ['Pon', 'Wt', 'Śr', 'Czw', 'Pt', 'Sob', 'Nd'];
+    : ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 
   const STATUS_LABEL = {
-    available: t('status_available', 'Dostępny'),
-    tentative: t('status_tentative', 'Wstępna rezerwacja'),
-    booked: t('status_booked', 'Zajęty'),
-    none: t('status_none', 'Brak informacji'),
+    available: t('status_available', 'Available'),
+    tentative: t('status_tentative', 'Tentative booking'),
+    booked: t('status_booked', 'Booked'),
+    none: t('status_none', 'No information'),
   };
 
   const toDateKey = (date) => {
@@ -62,6 +63,18 @@
     return out;
   };
 
+  const normalizeDayModeMap = (raw) => {
+    if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return {};
+    const out = {};
+    Object.entries(raw).forEach(([date, mode]) => {
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) return;
+      if (mode === 'slots' || mode === 'all_day') {
+        out[date] = mode;
+      }
+    });
+    return out;
+  };
+
   const normalizeReservations = (raw) => {
     if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return {};
     const now = Math.floor(Date.now() / 1000);
@@ -70,7 +83,7 @@
       if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) return;
       if (!slots || typeof slots !== 'object' || Array.isArray(slots)) return;
       Object.entries(slots).forEach(([time, entry]) => {
-        if (!/^(?:[01]\d|2[0-3]):[0-5]\d$/.test(time)) return;
+        if (!/^(?:[01]\d|2[0-3]):[0-5]\d$/.test(time) && time !== 'ALL_DAY') return;
         if (!entry || typeof entry !== 'object' || Array.isArray(entry)) return;
         const status = String(entry.status || '');
         if (!['hold', 'booked'].includes(status)) return;
@@ -87,8 +100,11 @@
     const id = (calendar.dataset.abcCalendarId || '').trim();
     const monthsRaw = Number(calendar.dataset.abcMonths || 12);
     const offsetRaw = Number(calendar.dataset.abcOffset || 0);
+    const dayModeDefaultRaw = String(calendar.dataset.abcDayModeDefault || 'slots').trim();
+    const dayModeDefault = ['slots', 'all_day', 'hybrid'].includes(dayModeDefaultRaw) ? dayModeDefaultRaw : 'slots';
 
     let statusMap = {};
+    let dayModeMap = {};
     let defaultSlots = [];
     let timeOverrides = {};
     let timeReservations = {};
@@ -96,6 +112,11 @@
       statusMap = normalizeMap(JSON.parse(calendar.dataset.abcStatusMap || '{}'));
     } catch (_e) {
       statusMap = {};
+    }
+    try {
+      dayModeMap = normalizeDayModeMap(JSON.parse(calendar.dataset.abcDayModeMap || '{}'));
+    } catch (_e) {
+      dayModeMap = {};
     }
     try {
       defaultSlots = normalizeSlots(JSON.parse(calendar.dataset.abcTimeDefault || '[]'));
@@ -126,6 +147,7 @@
     const dateInput = calendar.querySelector('[data-abc-date]');
     const dateDisplay = calendar.querySelector('[data-abc-date-display]');
     const timeSelect = calendar.querySelector('[data-abc-time-select]');
+    const isAllDayInput = calendar.querySelector('[data-abc-is-all-day]');
 
     if (!monthLabel || !weekdays || !daysGrid || !note || !prev || !next) return;
 
@@ -156,8 +178,8 @@
     const weekdaysLabels = tWeekdays;
     weekdays.innerHTML = weekdaysLabels.map((d) => `<div>${d}</div>`).join('');
 
-    const monthFormatter = new Intl.DateTimeFormat('pl-PL', { month: 'long', year: 'numeric' });
-    const dateFormatter = new Intl.DateTimeFormat('pl-PL', { day: '2-digit', month: '2-digit', year: 'numeric' });
+    const monthFormatter = new Intl.DateTimeFormat(locale, { month: 'long', year: 'numeric' });
+    const dateFormatter = new Intl.DateTimeFormat(locale, { day: '2-digit', month: '2-digit', year: 'numeric' });
     let index = 0;
 
     const hideBooking = () => {
@@ -166,12 +188,26 @@
       if (dateInput) dateInput.value = '';
       if (dateDisplay) dateDisplay.value = '';
       if (timeSelect) {
-        timeSelect.innerHTML = `<option value="">${t('choose_hour', 'Wybierz godzinę')}</option>`;
+        timeSelect.innerHTML = `<option value="">${t('choose_hour', 'Choose time')}</option>`;
         timeSelect.value = '';
+      }
+      if (isAllDayInput) {
+        isAllDayInput.value = '0';
       }
     };
 
+    const resolveDayMode = (dayKey) => {
+      const fromMap = dayModeMap[dayKey];
+      if (fromMap === 'all_day' || fromMap === 'slots') return fromMap;
+      if (dayModeDefault === 'all_day') return 'all_day';
+      return 'slots';
+    };
+
     const getAvailableSlots = (dayKey) => {
+      if (resolveDayMode(dayKey) === 'all_day') {
+        const reserved = timeReservations[dayKey] || {};
+        return Object.keys(reserved).length > 0 ? [] : ['ALL_DAY'];
+      }
       const configured = (timeOverrides[dayKey] && timeOverrides[dayKey].length > 0)
         ? timeOverrides[dayKey]
         : defaultSlots;
@@ -186,15 +222,31 @@
         hideBooking();
         return;
       }
+      const dayMode = resolveDayMode(dayKey);
       const d = new Date(dayKey + 'T00:00:00');
       bookingPanel.hidden = false;
       openButton.hidden = false;
       form.hidden = true;
       dateInput.value = dayKey;
       dateDisplay.value = dateFormatter.format(d);
-      timeSelect.innerHTML = [`<option value="">${t('choose_hour', 'Wybierz godzinę')}</option>`]
-        .concat(daySlots.map((slot) => `<option value="${slot}">${slot}</option>`))
-        .join('');
+      if (dayMode === 'all_day') {
+        timeSelect.innerHTML = `<option value="ALL_DAY">${t('all_day', 'Full day')}</option>`;
+        timeSelect.value = 'ALL_DAY';
+        timeSelect.required = false;
+        timeSelect.disabled = true;
+        if (isAllDayInput) {
+          isAllDayInput.value = '1';
+        }
+      } else {
+        timeSelect.disabled = false;
+        timeSelect.required = true;
+        timeSelect.innerHTML = [`<option value="">${t('choose_hour', 'Choose time')}</option>`]
+          .concat(daySlots.map((slot) => `<option value="${slot}">${slot}</option>`))
+          .join('');
+        if (isAllDayInput) {
+          isAllDayInput.value = '0';
+        }
+      }
     };
 
     openButton?.addEventListener('click', () => {
@@ -238,7 +290,7 @@
       const first = daysGrid.querySelector('.abc-day[data-day]');
       if (first) first.click();
       else {
-        note.textContent = t('no_data_month', 'Brak danych.');
+        note.textContent = t('no_data_month', 'No data for selected month.');
         hideBooking();
       }
     };
@@ -257,7 +309,13 @@
       const d = day ? new Date(day + 'T00:00:00') : null;
       const dateText = d ? dateFormatter.format(d) : '';
       const daySlots = day ? getAvailableSlots(day) : [];
-      const slotsText = daySlots.length > 0 ? ` · ${t('hours_prefix', 'Godziny:')} ${daySlots.join(', ')}` : '';
+      const dayMode = day ? resolveDayMode(day) : 'slots';
+      const showSlots = data.status !== 'none';
+      const slotsText = showSlots
+        ? (dayMode === 'all_day'
+            ? ` · ${t('all_day', 'Full day')}`
+            : (daySlots.length > 0 ? ` · ${t('hours_prefix', 'Hours:')} ${daySlots.join(', ')}` : ''))
+        : '';
 
       note.textContent = data.note
         ? `${dateText}: ${(STATUS_LABEL[data.status] || STATUS_LABEL.none)} · ${data.note}${slotsText}`

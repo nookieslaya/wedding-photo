@@ -20,16 +20,19 @@ trait Rdev_Calendar_Frontend_Trait {
         $front_js_ver = file_exists($front_js_path) ? (string) filemtime($front_js_path) : self::VERSION;
         wp_register_style('abc-frontend', $base . 'css/frontend.css', [], $front_css_ver);
         wp_register_script('abc-frontend', $base . 'js/frontend.js', [], $front_js_ver, true);
+        $is_pl = self::is_polish_locale();
         wp_localize_script('abc-frontend', 'abcCalendarI18n', [
-            'status_available' => __('Dostępny', 'rdev-calendar'),
-            'status_tentative' => __('Wstępna rezerwacja', 'rdev-calendar'),
-            'status_booked' => __('Zajęty', 'rdev-calendar'),
-            'status_none' => __('Brak informacji', 'rdev-calendar'),
-            'weekdays' => [__('Pon', 'rdev-calendar'), __('Wt', 'rdev-calendar'), __('Śr', 'rdev-calendar'), __('Czw', 'rdev-calendar'), __('Pt', 'rdev-calendar'), __('Sob', 'rdev-calendar'), __('Nd', 'rdev-calendar')],
-            'choose_hour' => __('Wybierz godzinę', 'rdev-calendar'),
-            'no_data_month' => __('Brak danych dla wybranego miesiąca.', 'rdev-calendar'),
-            'hours_prefix' => __('Godziny:', 'rdev-calendar'),
-            'click_day_status' => __('Kliknij dzień, aby zobaczyć status.', 'rdev-calendar'),
+            'locale' => self::locale_tag(),
+            'status_available' => self::tr('Available', 'Dostępny'),
+            'status_tentative' => self::tr('Tentative booking', 'Wstępna rezerwacja'),
+            'status_booked' => self::tr('Booked', 'Zajęty'),
+            'status_none' => self::tr('No information', 'Brak informacji'),
+            'weekdays' => $is_pl ? ['Pon', 'Wt', 'Śr', 'Czw', 'Pt', 'Sob', 'Nd'] : ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
+            'choose_hour' => self::tr('Choose time', 'Wybierz godzinę'),
+            'no_data_month' => self::tr('No data for selected month.', 'Brak danych dla wybranego miesiąca.'),
+            'hours_prefix' => self::tr('Hours:', 'Godziny:'),
+            'all_day' => self::tr('Full day', 'Cały dzień'),
+            'click_day_status' => self::tr('Click a day to see status.', 'Kliknij dzień, aby zobaczyć status.'),
         ]);
     }
 
@@ -49,6 +52,7 @@ trait Rdev_Calendar_Frontend_Trait {
 
         $s = self::get_calendar_settings($calendar_id);
         $status_map = self::normalize_status_map((string) $s['status_map']);
+        $day_mode_map = self::normalize_day_mode_map((string) ($s['day_mode_map'] ?? '{}'));
         $time_overrides = self::normalize_time_slots_overrides((string) ($s['time_slots_overrides'] ?? '{}'));
         $time_reservations = self::normalize_time_slot_reservations((string) ($s['time_slots_reservations'] ?? '{}'));
         $default_time_slots = self::parse_time_slots((string) ($s['booking_default_time_slots'] ?? ''));
@@ -92,9 +96,9 @@ trait Rdev_Calendar_Frontend_Trait {
                         <a class="abc-cta" href="<?php echo esc_url((string) $s['cta_url']); ?>"><?php echo esc_html((string) $s['cta_label']); ?></a>
                     <?php endif; ?>
                     <div class="abc-legend">
-                        <div><span class="dot available"></span><?php echo esc_html__('Dostępny', 'rdev-calendar'); ?></div>
-                        <div><span class="dot tentative"></span><?php echo esc_html__('Wstępna Rezerwacja', 'rdev-calendar'); ?></div>
-                        <div><span class="dot booked"></span><?php echo esc_html__('Zajęty', 'rdev-calendar'); ?></div>
+                        <div><span class="dot available"></span><?php echo esc_html(self::tr('Available', 'Dostępny')); ?></div>
+                        <div><span class="dot tentative"></span><?php echo esc_html(self::tr('Tentative Booking', 'Wstępna Rezerwacja')); ?></div>
+                        <div><span class="dot booked"></span><?php echo esc_html(self::tr('Booked', 'Zajęty')); ?></div>
                     </div>
                 </aside>
 
@@ -104,6 +108,8 @@ trait Rdev_Calendar_Frontend_Trait {
                     data-abc-months="<?php echo (int) $s['months_to_show']; ?>"
                     data-abc-offset="<?php echo (int) $s['start_month_offset']; ?>"
                     data-abc-status-map="<?php echo esc_attr(wp_json_encode($status_map)); ?>"
+                    data-abc-day-mode-default="<?php echo esc_attr((string) ($s['day_mode_default'] ?? 'slots')); ?>"
+                    data-abc-day-mode-map="<?php echo esc_attr(wp_json_encode($day_mode_map)); ?>"
                     data-abc-time-default="<?php echo esc_attr(wp_json_encode($default_time_slots)); ?>"
                     data-abc-time-overrides="<?php echo esc_attr(wp_json_encode($time_overrides)); ?>"
                     data-abc-time-reservations="<?php echo esc_attr(wp_json_encode($time_reservations)); ?>">
@@ -116,7 +122,7 @@ trait Rdev_Calendar_Frontend_Trait {
 
                     <div class="abc-weekdays" data-abc-weekdays></div>
                     <div class="abc-days" data-abc-days></div>
-                    <p class="abc-note" data-abc-note><?php echo esc_html__('Kliknij dzień, aby zobaczyć status.', 'rdev-calendar'); ?></p>
+                    <p class="abc-note" data-abc-note><?php echo esc_html(self::tr('Click a day to see status.', 'Kliknij dzień, aby zobaczyć status.')); ?></p>
 
                     <?php if ($show_result) : ?>
                         <div class="abc-result <?php echo $result_state === 'success' ? 'ok' : 'err'; ?>">
@@ -129,39 +135,40 @@ trait Rdev_Calendar_Frontend_Trait {
                         <p><?php echo esc_html($notice_text); ?></p>
 
                         <?php if (! empty($options)) : ?>
-                            <button type="button" class="abc-open" data-abc-open><?php echo esc_html__('Zarezerwuj', 'rdev-calendar'); ?></button>
+                            <button type="button" class="abc-open" data-abc-open><?php echo esc_html(self::tr('Book now', 'Zarezerwuj')); ?></button>
                             <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>" data-abc-form hidden>
                                 <input type="hidden" name="action" value="abc_submit_booking_request">
                                 <input type="hidden" name="abc_calendar_id" value="<?php echo (int) $calendar_id; ?>">
                                 <input type="hidden" name="abc_honeypot" value="">
                                 <?php wp_nonce_field('abc_submit_booking_request_' . $calendar_id, 'abc_nonce'); ?>
 
-                                <label><?php echo esc_html__('Data wydarzenia', 'rdev-calendar'); ?> *
+                                <label><?php echo esc_html(self::tr('Event date', 'Data wydarzenia')); ?> *
                                     <input type="text" name="abc_date_display" data-abc-date-display readonly>
                                     <input type="hidden" name="abc_date" data-abc-date>
                                 </label>
-                                <label><?php echo esc_html__('Godzina', 'rdev-calendar'); ?> *
+                                <label><?php echo esc_html(self::tr('Time', 'Godzina')); ?> *
                                     <select name="abc_time" data-abc-time-select required>
-                                        <option value=""><?php echo esc_html__('Wybierz godzinę', 'rdev-calendar'); ?></option>
+                                        <option value=""><?php echo esc_html(self::tr('Choose time', 'Wybierz godzinę')); ?></option>
                                     </select>
                                 </label>
-                                <label><?php echo esc_html__('Imię i nazwisko', 'rdev-calendar'); ?> *<input type="text" name="abc_full_name" required maxlength="120"></label>
-                                <label><?php echo esc_html__('Usługa / Pakiet', 'rdev-calendar'); ?> *
+                                <input type="hidden" name="abc_is_all_day" value="0" data-abc-is-all-day>
+                                <label><?php echo esc_html(self::tr('Full name', 'Imię i nazwisko')); ?> *<input type="text" name="abc_full_name" required maxlength="120"></label>
+                                <label><?php echo esc_html(self::tr('Service / Package', 'Usługa / Pakiet')); ?> *
                                     <select name="abc_option" required>
-                                        <option value=""><?php echo esc_html__('Wybierz', 'rdev-calendar'); ?></option>
+                                        <option value=""><?php echo esc_html(self::tr('Choose', 'Wybierz')); ?></option>
                                         <?php foreach ($options as $opt) : ?>
                                             <option value="<?php echo esc_attr($opt); ?>"><?php echo esc_html($opt); ?></option>
                                         <?php endforeach; ?>
                                     </select>
                                 </label>
-                                <label><?php echo esc_html__('E-mail', 'rdev-calendar'); ?> *<input type="email" name="abc_email" required maxlength="190"></label>
-                                <label><?php echo esc_html__('Numer telefonu', 'rdev-calendar'); ?> *<input type="text" name="abc_phone" required maxlength="50"></label>
-                                <label><?php echo esc_html__('Wiadomość', 'rdev-calendar'); ?><textarea name="abc_message" rows="4" maxlength="1500"></textarea></label>
-                                <label class="abc-consent"><input type="checkbox" name="abc_consent" value="1" required> <?php echo esc_html((string) $s['booking_consent_label']); ?> *</label>
+                                <label><?php echo esc_html(self::tr('Email', 'E-mail')); ?> *<input type="email" name="abc_email" required maxlength="190"></label>
+                                <label><?php echo esc_html(self::tr('Phone number', 'Numer telefonu')); ?> *<input type="text" name="abc_phone" required maxlength="50"></label>
+                                <label><?php echo esc_html(self::tr('Message', 'Wiadomość')); ?><textarea name="abc_message" rows="4" maxlength="1500"></textarea></label>
+                                <label class="abc-consent"><input type="checkbox" name="abc_consent" value="1" required> <?php echo wp_kses((string) $s['booking_consent_label'], ['a' => ['href' => true, 'target' => true, 'rel' => true], 'br' => []]); ?> *</label>
                                 <button type="submit"><?php echo esc_html((string) $s['booking_form_submit_label']); ?></button>
                             </form>
                         <?php else : ?>
-                            <p><?php echo esc_html__('Dodaj opcje „Usługa / Pakiet” w ustawieniach kalendarza.', 'rdev-calendar'); ?></p>
+                            <p><?php echo esc_html(self::tr('Add "Service / Package" options in calendar settings.', 'Dodaj opcje „Usługa / Pakiet” w ustawieniach kalendarza.')); ?></p>
                         <?php endif; ?>
                     </div>
                 </div>

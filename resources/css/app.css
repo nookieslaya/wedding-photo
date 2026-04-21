@@ -5,7 +5,6 @@
 @import "./modules/p-wedding-photo.css";
 @import "./modules/offer.css";
 @import "./modules/products.css";
-@import "./modules/availability-calendar.css";
 
 @theme {
   --breakpoint-md: 64rem;

@@ -6,44 +6,61 @@ if (! defined('ABSPATH')) {
 
 if (! trait_exists('Rdev_Calendar_Settings_Trait')) {
 trait Rdev_Calendar_Settings_Trait {
+    private static function is_polish_locale(): bool {
+        $locale = strtolower((string) determine_locale());
+        return str_starts_with($locale, 'pl');
+    }
+
+    private static function locale_tag(): string {
+        return self::is_polish_locale() ? 'pl-PL' : 'en-US';
+    }
+
+    private static function tr(string $en, string $pl): string {
+        return self::is_polish_locale() ? $pl : $en;
+    }
+
     private static function defaults(): array {
         return [
-            'section_title' => 'KALENDARZ',
-            'section_subtitle' => 'DOSTĘPNOŚĆ',
+            'section_title' => self::tr('CALENDAR', 'KALENDARZ'),
+            'section_subtitle' => self::tr('AVAILABILITY', 'DOSTĘPNOŚĆ'),
             'theme_preset' => 'dark',
             'background_style' => 'gradient',
             'font_preset' => 'modern',
-            'heading' => 'Sprawdź dostępne terminy',
+            'heading' => self::tr('Check available dates', 'Sprawdź dostępne terminy'),
             'description' => '',
             'months_to_show' => 12,
             'start_month_offset' => 0,
             'cta_label' => '',
             'cta_url' => '',
             'status_map' => '{}',
+            'day_mode_default' => 'slots',
+            'day_mode_map' => '{}',
+            'time_slots_overrides' => '{}',
+            'time_slots_reservations' => '{}',
             'booking_notification_email' => '',
             'booking_from_email' => '',
             'booking_from_name' => '',
             'booking_hold_minutes' => 2880,
             'booking_default_time_slots' => "10:00\n12:00\n14:00\n16:00",
-            'booking_hold_notice_text' => 'Rezerwacja terminu jest wstępna i trwa {hours}h ({minutes} min). Po tym czasie termin wraca do puli wolnych, jeśli nie zostanie potwierdzony.',
-            'booking_hold_note_template' => 'Wstępna rezerwacja na {hours}h ({minutes} min), do {expires}.',
-            'booking_success_message' => 'Dziękuję. Twoje zgłoszenie zostało zapisane. Termin jest zablokowany na {hours}h.',
-            'booking_error_message' => 'Nie udało się wysłać zgłoszenia. Sprawdź dane i spróbuj ponownie.',
+            'booking_hold_notice_text' => self::tr('Your booking is tentative and will be held for {hours}h ({minutes} min). After that, the date becomes available again if not confirmed.', 'Rezerwacja terminu jest wstępna i trwa {hours}h ({minutes} min). Po tym czasie termin wraca do puli wolnych, jeśli nie zostanie potwierdzony.'),
+            'booking_hold_note_template' => self::tr('Tentative hold for {hours}h ({minutes} min), until {expires}.', 'Wstępna rezerwacja na {hours}h ({minutes} min), do {expires}.'),
+            'booking_success_message' => self::tr('Thank you. Your request has been saved. The date is blocked for {hours}h.', 'Dziękuję. Twoje zgłoszenie zostało zapisane. Termin jest zablokowany na {hours}h.'),
+            'booking_error_message' => self::tr('Failed to submit the request. Please verify your data and try again.', 'Nie udało się wysłać zgłoszenia. Sprawdź dane i spróbuj ponownie.'),
             'booking_send_initial_email' => 1,
             'booking_send_expired_email' => 1,
             'booking_send_approved_email' => 1,
             'booking_send_rejected_email' => 1,
-            'booking_client_initial_email_subject' => 'Potwierdzenie wstępnej rezerwacji terminu',
+            'booking_client_initial_email_subject' => self::tr('Initial booking confirmation', 'Potwierdzenie wstępnej rezerwacji terminu'),
             'booking_client_initial_email_body' => "Dziękuję za zapytanie.\n\nTwój termin został wstępnie zablokowany na {hours}h ({minutes} min).\nData: {date}\nGodzina: {time}\nUsługa / Pakiet: {option}\nHold do: {expires}\n\nSkontaktuję się z Tobą, aby potwierdzić szczegóły.\n\n{site_name}",
-            'booking_client_expired_email_subject' => 'Wstępna rezerwacja wygasła',
-            'booking_client_expired_email_body' => "Cześć {full_name},\n\nWstępna rezerwacja terminu wygasła (brak potwierdzenia).\nData: {date}\nGodzina: {time}\nUsługa / Pakiet: {option}\nCzas holda: {hours}h ({minutes} min)\nWygasła: {expires}\n\nJeśli termin jest nadal aktualny, wyślij nowe zapytanie.\n\n{site_name}",
-            'booking_client_approved_email_subject' => 'Rezerwacja terminu została potwierdzona',
-            'booking_client_approved_email_body' => "Cześć {full_name},\n\nTwoja rezerwacja została potwierdzona.\nData: {date}\nGodzina: {time}\nUsługa / Pakiet: {option}\nStatus: {status}\n\nW razie pytań odpowiedz na tę wiadomość.\n\n{site_name}",
-            'booking_client_rejected_email_subject' => 'Rezerwacja terminu nie została potwierdzona',
-            'booking_client_rejected_email_body' => "Cześć {full_name},\n\nNiestety nie mogliśmy potwierdzić rezerwacji tego terminu.\nData: {date}\nGodzina: {time}\nUsługa / Pakiet: {option}\nStatus: {status}\n\nMożesz wybrać inny dostępny termin i wysłać nowe zapytanie.\n\n{site_name}",
-            'booking_form_heading' => 'Zarezerwuj termin',
-            'booking_form_submit_label' => 'Wyślij rezerwację',
-            'booking_consent_label' => 'Zapoznałam/em się z moim stylem pracy i akceptuję kontakt zwrotny.',
+            'booking_client_expired_email_subject' => self::tr('Tentative booking expired', 'Wstępna rezerwacja wygasła'),
+            'booking_client_expired_email_body' => self::tr("Hi {full_name},\n\nYour tentative booking has expired (no confirmation).\nDate: {date}\nTime: {time}\nService / Package: {option}\nHold duration: {hours}h ({minutes} min)\nExpired at: {expires}\n\nIf you are still interested, please submit a new request.\n\n{site_name}", "Cześć {full_name},\n\nWstępna rezerwacja terminu wygasła (brak potwierdzenia).\nData: {date}\nGodzina: {time}\nUsługa / Pakiet: {option}\nCzas holda: {hours}h ({minutes} min)\nWygasła: {expires}\n\nJeśli termin jest nadal aktualny, wyślij nowe zapytanie.\n\n{site_name}"),
+            'booking_client_approved_email_subject' => self::tr('Booking approved', 'Rezerwacja terminu została potwierdzona'),
+            'booking_client_approved_email_body' => self::tr("Hi {full_name},\n\nYour booking has been approved.\nDate: {date}\nTime: {time}\nService / Package: {option}\nStatus: {status}\n\nIf you have questions, reply to this message.\n\n{site_name}", "Cześć {full_name},\n\nTwoja rezerwacja została potwierdzona.\nData: {date}\nGodzina: {time}\nUsługa / Pakiet: {option}\nStatus: {status}\n\nW razie pytań odpowiedz na tę wiadomość.\n\n{site_name}"),
+            'booking_client_rejected_email_subject' => self::tr('Booking not approved', 'Rezerwacja terminu nie została potwierdzona'),
+            'booking_client_rejected_email_body' => self::tr("Hi {full_name},\n\nUnfortunately, we could not approve this booking.\nDate: {date}\nTime: {time}\nService / Package: {option}\nStatus: {status}\n\nYou can choose another available date and send a new request.\n\n{site_name}", "Cześć {full_name},\n\nNiestety nie mogliśmy potwierdzić rezerwacji tego terminu.\nData: {date}\nGodzina: {time}\nUsługa / Pakiet: {option}\nStatus: {status}\n\nMożesz wybrać inny dostępny termin i wysłać nowe zapytanie.\n\n{site_name}"),
+            'booking_form_heading' => self::tr('Book a date', 'Zarezerwuj termin'),
+            'booking_form_submit_label' => self::tr('Send booking request', 'Wyślij rezerwację'),
+            'booking_consent_label' => self::tr('I have reviewed the work style and agree to be contacted back.', 'Zapoznałam/em się z moim stylem pracy i akceptuję kontakt zwrotny.'),
             'booking_options' => "Ślub — Pakiet Premium\nPrzyjęcie — Reportaż\nSesja rodzinna — Mini",
         ];
     }
@@ -62,6 +79,8 @@ trait Rdev_Calendar_Settings_Trait {
             'cta_label' => '_abc_cta_label',
             'cta_url' => '_abc_cta_url',
             'status_map' => '_abc_status_map',
+            'day_mode_default' => '_abc_day_mode_default',
+            'day_mode_map' => '_abc_day_mode_map',
             'booking_notification_email' => '_abc_booking_notification_email',
             'booking_from_email' => '_abc_booking_from_email',
             'booking_from_name' => '_abc_booking_from_name',
@@ -116,6 +135,14 @@ trait Rdev_Calendar_Settings_Trait {
         if (! is_string($defaults['status_map']) || trim($defaults['status_map']) === '') {
             $defaults['status_map'] = '{}';
         }
+        $defaults['day_mode_default'] = self::sanitize_choice((string) ($defaults['day_mode_default'] ?? 'slots'), [
+            'slots' => 'slots',
+            'all_day' => 'all_day',
+            'hybrid' => 'hybrid',
+        ], 'slots');
+        if (! is_string($defaults['day_mode_map']) || trim($defaults['day_mode_map']) === '') {
+            $defaults['day_mode_map'] = '{}';
+        }
         if (! is_string($defaults['time_slots_overrides']) || trim($defaults['time_slots_overrides']) === '') {
             $defaults['time_slots_overrides'] = '{}';
         }
@@ -131,6 +158,9 @@ trait Rdev_Calendar_Settings_Trait {
     public static function render_settings_metabox(\WP_Post $post): void {
         $s = self::get_calendar_settings((int) $post->ID);
         wp_nonce_field('abc_save_calendar_meta', 'abc_calendar_meta_nonce');
+        $tr = static function (string $en, string $pl): string {
+            return self::tr($en, $pl);
+        };
 
         $text = static function ($v) {
             return esc_attr((string) $v);
@@ -140,10 +170,10 @@ trait Rdev_Calendar_Settings_Trait {
         };
         ?>
         <table class="form-table abc-settings-table" role="presentation">
-            <tr><th><label for="abc_section_title">Section title</label></th><td><input class="regular-text" id="abc_section_title" name="abc_settings[section_title]" value="<?php echo $text($s['section_title']); ?>"></td></tr>
-            <tr><th><label for="abc_section_subtitle">Section subtitle</label></th><td><input class="regular-text" id="abc_section_subtitle" name="abc_settings[section_subtitle]" value="<?php echo $text($s['section_subtitle']); ?>"></td></tr>
+            <tr><th><label for="abc_section_title"><?php echo esc_html($tr('Section title', 'Tytuł sekcji')); ?></label></th><td><input class="regular-text" id="abc_section_title" name="abc_settings[section_title]" value="<?php echo $text($s['section_title']); ?>"></td></tr>
+            <tr><th><label for="abc_section_subtitle"><?php echo esc_html($tr('Section subtitle', 'Podtytuł sekcji')); ?></label></th><td><input class="regular-text" id="abc_section_subtitle" name="abc_settings[section_subtitle]" value="<?php echo $text($s['section_subtitle']); ?>"></td></tr>
             <tr>
-                <th><label for="abc_theme_preset">Theme preset</label></th>
+                <th><label for="abc_theme_preset"><?php echo esc_html($tr('Theme preset', 'Motyw')); ?></label></th>
                 <td>
                     <select id="abc_theme_preset" name="abc_settings[theme_preset]">
                         <?php foreach (self::theme_presets() as $value => $label) : ?>
@@ -153,7 +183,7 @@ trait Rdev_Calendar_Settings_Trait {
                 </td>
             </tr>
             <tr>
-                <th><label for="abc_background_style">Background style</label></th>
+                <th><label for="abc_background_style"><?php echo esc_html($tr('Background style', 'Styl tła')); ?></label></th>
                 <td>
                     <select id="abc_background_style" name="abc_settings[background_style]">
                         <?php foreach (self::background_styles() as $value => $label) : ?>
@@ -163,7 +193,7 @@ trait Rdev_Calendar_Settings_Trait {
                 </td>
             </tr>
             <tr>
-                <th><label for="abc_font_preset">Font preset</label></th>
+                <th><label for="abc_font_preset"><?php echo esc_html($tr('Font preset', 'Styl fontu')); ?></label></th>
                 <td>
                     <select id="abc_font_preset" name="abc_settings[font_preset]">
                         <?php foreach (self::font_presets() as $value => $label) : ?>
@@ -172,52 +202,79 @@ trait Rdev_Calendar_Settings_Trait {
                     </select>
                 </td>
             </tr>
-            <tr><th><label for="abc_heading">Heading</label></th><td><input class="regular-text" id="abc_heading" name="abc_settings[heading]" value="<?php echo $text($s['heading']); ?>"></td></tr>
-            <tr><th><label for="abc_description">Description</label></th><td><textarea class="large-text" rows="3" id="abc_description" name="abc_settings[description]"><?php echo $textarea($s['description']); ?></textarea></td></tr>
-            <tr><th><label for="abc_months_to_show">Months to show</label></th><td><input type="number" min="3" max="24" id="abc_months_to_show" name="abc_settings[months_to_show]" value="<?php echo (int) $s['months_to_show']; ?>"></td></tr>
-            <tr><th><label for="abc_start_month_offset">Start month offset</label></th><td><input type="number" min="-12" max="12" id="abc_start_month_offset" name="abc_settings[start_month_offset]" value="<?php echo (int) $s['start_month_offset']; ?>"></td></tr>
-            <tr><th><label for="abc_cta_label">CTA label</label></th><td><input class="regular-text" id="abc_cta_label" name="abc_settings[cta_label]" value="<?php echo $text($s['cta_label']); ?>"></td></tr>
-            <tr><th><label for="abc_cta_url">CTA URL</label></th><td><input class="regular-text" id="abc_cta_url" name="abc_settings[cta_url]" value="<?php echo $text($s['cta_url']); ?>"></td></tr>
-            <tr><th><label for="abc_booking_notification_email">Notification email</label></th><td><input type="email" class="regular-text" id="abc_booking_notification_email" name="abc_settings[booking_notification_email]" value="<?php echo $text($s['booking_notification_email']); ?>"></td></tr>
-            <tr><th><label for="abc_booking_from_email">From email</label></th><td><input type="email" class="regular-text" id="abc_booking_from_email" name="abc_settings[booking_from_email]" value="<?php echo $text($s['booking_from_email']); ?>"></td></tr>
-            <tr><th><label for="abc_booking_from_name">From name</label></th><td><input class="regular-text" id="abc_booking_from_name" name="abc_settings[booking_from_name]" value="<?php echo $text($s['booking_from_name']); ?>"></td></tr>
-            <tr><th><label for="abc_booking_hold_minutes">Hold duration (minutes)</label></th><td><input type="number" min="1" max="10080" id="abc_booking_hold_minutes" name="abc_settings[booking_hold_minutes]" value="<?php echo (int) $s['booking_hold_minutes']; ?>"></td></tr>
-            <tr><th><label for="abc_booking_default_time_slots">Default available hours</label></th><td><textarea class="large-text" rows="5" id="abc_booking_default_time_slots" name="abc_settings[booking_default_time_slots]"><?php echo $textarea($s['booking_default_time_slots']); ?></textarea><p class="description">One time per line in HH:MM format, e.g. 10:00</p></td></tr>
-            <tr><th><label for="abc_booking_hold_notice_text">Hold notice text</label></th><td><textarea class="large-text" rows="2" id="abc_booking_hold_notice_text" name="abc_settings[booking_hold_notice_text]"><?php echo $textarea($s['booking_hold_notice_text']); ?></textarea><p class="description">Placeholders: {hours}, {minutes}</p></td></tr>
-            <tr><th><label for="abc_booking_hold_note_template">Calendar hold note template</label></th><td><textarea class="large-text" rows="2" id="abc_booking_hold_note_template" name="abc_settings[booking_hold_note_template]"><?php echo $textarea($s['booking_hold_note_template']); ?></textarea><p class="description">Placeholders: {hours}, {minutes}, {expires}</p></td></tr>
-            <tr><th><label for="abc_booking_success_message">Success message</label></th><td><textarea class="large-text" rows="2" id="abc_booking_success_message" name="abc_settings[booking_success_message]"><?php echo $textarea($s['booking_success_message']); ?></textarea></td></tr>
-            <tr><th><label for="abc_booking_error_message">Error message</label></th><td><textarea class="large-text" rows="2" id="abc_booking_error_message" name="abc_settings[booking_error_message]"><?php echo $textarea($s['booking_error_message']); ?></textarea></td></tr>
+            <tr><th><label for="abc_heading"><?php echo esc_html($tr('Heading', 'Nagłówek')); ?></label></th><td><input class="regular-text" id="abc_heading" name="abc_settings[heading]" value="<?php echo $text($s['heading']); ?>"></td></tr>
+            <tr><th><label for="abc_description"><?php echo esc_html($tr('Description', 'Opis')); ?></label></th><td><textarea class="large-text" rows="3" id="abc_description" name="abc_settings[description]"><?php echo $textarea($s['description']); ?></textarea></td></tr>
+            <tr><th><label for="abc_months_to_show"><?php echo esc_html($tr('Months to show', 'Liczba miesięcy')); ?></label></th><td><input type="number" min="3" max="24" id="abc_months_to_show" name="abc_settings[months_to_show]" value="<?php echo (int) $s['months_to_show']; ?>"></td></tr>
+            <tr><th><label for="abc_start_month_offset"><?php echo esc_html($tr('Start month offset', 'Przesunięcie miesiąca startowego')); ?></label></th><td><input type="number" min="-12" max="12" id="abc_start_month_offset" name="abc_settings[start_month_offset]" value="<?php echo (int) $s['start_month_offset']; ?>"></td></tr>
+            <tr><th><label for="abc_cta_label"><?php echo esc_html($tr('CTA label', 'Etykieta CTA')); ?></label></th><td><input class="regular-text" id="abc_cta_label" name="abc_settings[cta_label]" value="<?php echo $text($s['cta_label']); ?>"></td></tr>
+            <tr><th><label for="abc_cta_url"><?php echo esc_html($tr('CTA URL', 'Link CTA')); ?></label></th><td><input class="regular-text" id="abc_cta_url" name="abc_settings[cta_url]" value="<?php echo $text($s['cta_url']); ?>"></td></tr>
+            <tr>
+                <th><label for="abc_day_mode_default"><?php echo esc_html($tr('Default booking mode', 'Domyślny tryb rezerwacji')); ?></label></th>
+                <td>
+                    <select id="abc_day_mode_default" name="abc_settings[day_mode_default]">
+                        <option value="slots" <?php selected((string) $s['day_mode_default'], 'slots'); ?>><?php echo esc_html($tr('Only time slots', 'Tylko godziny')); ?></option>
+                        <option value="all_day" <?php selected((string) $s['day_mode_default'], 'all_day'); ?>><?php echo esc_html($tr('Only full day', 'Tylko cały dzień')); ?></option>
+                        <option value="hybrid" <?php selected((string) $s['day_mode_default'], 'hybrid'); ?>><?php echo esc_html($tr('Hybrid (per-day in manager)', 'Hybrydowy (per dzień w managerze)')); ?></option>
+                    </select>
+                </td>
+            </tr>
+            <tr><th><label for="abc_booking_notification_email"><?php echo esc_html($tr('Notification email', 'E-mail powiadomień')); ?></label></th><td><input type="email" class="regular-text" id="abc_booking_notification_email" name="abc_settings[booking_notification_email]" value="<?php echo $text($s['booking_notification_email']); ?>"></td></tr>
+            <tr><th><label for="abc_booking_from_email"><?php echo esc_html($tr('From email', 'E-mail nadawcy')); ?></label></th><td><input type="email" class="regular-text" id="abc_booking_from_email" name="abc_settings[booking_from_email]" value="<?php echo $text($s['booking_from_email']); ?>"></td></tr>
+            <tr><th><label for="abc_booking_from_name"><?php echo esc_html($tr('From name', 'Nazwa nadawcy')); ?></label></th><td><input class="regular-text" id="abc_booking_from_name" name="abc_settings[booking_from_name]" value="<?php echo $text($s['booking_from_name']); ?>"></td></tr>
+            <tr><th><label for="abc_booking_hold_minutes"><?php echo esc_html($tr('Hold duration (minutes)', 'Czas blokady (minuty)')); ?></label></th><td><input type="number" min="1" max="10080" id="abc_booking_hold_minutes" name="abc_settings[booking_hold_minutes]" value="<?php echo (int) $s['booking_hold_minutes']; ?>"></td></tr>
+            <tr><th><label for="abc_booking_default_time_slots"><?php echo esc_html($tr('Default available hours', 'Domyślne dostępne godziny')); ?></label></th><td><textarea class="large-text" rows="5" id="abc_booking_default_time_slots" name="abc_settings[booking_default_time_slots]"><?php echo $textarea($s['booking_default_time_slots']); ?></textarea><p class="description"><?php echo esc_html($tr('One time per line in HH:MM format, e.g. 10:00', 'Jedna godzina w linii w formacie HH:MM, np. 10:00')); ?></p></td></tr>
+            <tr><th><label for="abc_booking_hold_notice_text"><?php echo esc_html($tr('Hold notice text', 'Tekst informacji o blokadzie')); ?></label></th><td><textarea class="large-text" rows="2" id="abc_booking_hold_notice_text" name="abc_settings[booking_hold_notice_text]"><?php echo $textarea($s['booking_hold_notice_text']); ?></textarea><p class="description"><?php echo esc_html($tr('Placeholders: {hours}, {minutes}', 'Zmienne: {hours}, {minutes}')); ?></p></td></tr>
+            <tr><th><label for="abc_booking_hold_note_template"><?php echo esc_html($tr('Calendar hold note template', 'Szablon notatki blokady w kalendarzu')); ?></label></th><td><textarea class="large-text" rows="2" id="abc_booking_hold_note_template" name="abc_settings[booking_hold_note_template]"><?php echo $textarea($s['booking_hold_note_template']); ?></textarea><p class="description"><?php echo esc_html($tr('Placeholders: {hours}, {minutes}, {expires}', 'Zmienne: {hours}, {minutes}, {expires}')); ?></p></td></tr>
+            <tr><th><label for="abc_booking_success_message"><?php echo esc_html($tr('Success message', 'Komunikat sukcesu')); ?></label></th><td><textarea class="large-text" rows="2" id="abc_booking_success_message" name="abc_settings[booking_success_message]"><?php echo $textarea($s['booking_success_message']); ?></textarea></td></tr>
+            <tr><th><label for="abc_booking_error_message"><?php echo esc_html($tr('Error message', 'Komunikat błędu')); ?></label></th><td><textarea class="large-text" rows="2" id="abc_booking_error_message" name="abc_settings[booking_error_message]"><?php echo $textarea($s['booking_error_message']); ?></textarea></td></tr>
 
-            <tr><th>Send client email after booking</th><td><label><input type="checkbox" name="abc_settings[booking_send_initial_email]" value="1" <?php checked($s['booking_send_initial_email']); ?>> Enable</label></td></tr>
-            <tr><th>Send client email when hold expires</th><td><label><input type="checkbox" name="abc_settings[booking_send_expired_email]" value="1" <?php checked($s['booking_send_expired_email']); ?>> Enable</label></td></tr>
-            <tr><th>Send client email when booking is approved</th><td><label><input type="checkbox" name="abc_settings[booking_send_approved_email]" value="1" <?php checked($s['booking_send_approved_email']); ?>> Enable</label></td></tr>
-            <tr><th>Send client email when booking is rejected</th><td><label><input type="checkbox" name="abc_settings[booking_send_rejected_email]" value="1" <?php checked($s['booking_send_rejected_email']); ?>> Enable</label></td></tr>
+            <tr><th><?php echo esc_html($tr('Send client email after booking', 'Wyślij e-mail klienta po rezerwacji')); ?></th><td><label><input type="checkbox" name="abc_settings[booking_send_initial_email]" value="1" <?php checked($s['booking_send_initial_email']); ?>> <?php echo esc_html($tr('Enable', 'Włącz')); ?></label></td></tr>
+            <tr><th><?php echo esc_html($tr('Send client email when hold expires', 'Wyślij e-mail klienta po wygaśnięciu blokady')); ?></th><td><label><input type="checkbox" name="abc_settings[booking_send_expired_email]" value="1" <?php checked($s['booking_send_expired_email']); ?>> <?php echo esc_html($tr('Enable', 'Włącz')); ?></label></td></tr>
+            <tr><th><?php echo esc_html($tr('Send client email when booking is approved', 'Wyślij e-mail klienta po zatwierdzeniu')); ?></th><td><label><input type="checkbox" name="abc_settings[booking_send_approved_email]" value="1" <?php checked($s['booking_send_approved_email']); ?>> <?php echo esc_html($tr('Enable', 'Włącz')); ?></label></td></tr>
+            <tr><th><?php echo esc_html($tr('Send client email when booking is rejected', 'Wyślij e-mail klienta po odrzuceniu')); ?></th><td><label><input type="checkbox" name="abc_settings[booking_send_rejected_email]" value="1" <?php checked($s['booking_send_rejected_email']); ?>> <?php echo esc_html($tr('Enable', 'Włącz')); ?></label></td></tr>
 
-            <tr><th><label for="abc_booking_client_initial_email_subject">Client email subject (after booking)</label></th><td><input class="regular-text" id="abc_booking_client_initial_email_subject" name="abc_settings[booking_client_initial_email_subject]" value="<?php echo $text($s['booking_client_initial_email_subject']); ?>"></td></tr>
-            <tr><th><label for="abc_booking_client_initial_email_body">Client email body (after booking)</label></th><td><textarea class="large-text" rows="6" id="abc_booking_client_initial_email_body" name="abc_settings[booking_client_initial_email_body]"><?php echo $textarea($s['booking_client_initial_email_body']); ?></textarea><p class="description">Placeholders: {full_name}, {date}, {time}, {option}, {hours}, {minutes}, {expires}, {site_name}</p></td></tr>
-            <tr><th><label for="abc_booking_client_expired_email_subject">Client email subject (hold expired)</label></th><td><input class="regular-text" id="abc_booking_client_expired_email_subject" name="abc_settings[booking_client_expired_email_subject]" value="<?php echo $text($s['booking_client_expired_email_subject']); ?>"></td></tr>
-            <tr><th><label for="abc_booking_client_expired_email_body">Client email body (hold expired)</label></th><td><textarea class="large-text" rows="6" id="abc_booking_client_expired_email_body" name="abc_settings[booking_client_expired_email_body]"><?php echo $textarea($s['booking_client_expired_email_body']); ?></textarea><p class="description">Placeholders: {full_name}, {date}, {time}, {option}, {hours}, {minutes}, {expires}, {site_name}</p></td></tr>
-            <tr><th><label for="abc_booking_client_approved_email_subject">Client email subject (approved)</label></th><td><input class="regular-text" id="abc_booking_client_approved_email_subject" name="abc_settings[booking_client_approved_email_subject]" value="<?php echo $text($s['booking_client_approved_email_subject']); ?>"></td></tr>
-            <tr><th><label for="abc_booking_client_approved_email_body">Client email body (approved)</label></th><td><textarea class="large-text" rows="6" id="abc_booking_client_approved_email_body" name="abc_settings[booking_client_approved_email_body]"><?php echo $textarea($s['booking_client_approved_email_body']); ?></textarea><p class="description">Placeholders: {full_name}, {date}, {time}, {option}, {status}, {site_name}</p></td></tr>
-            <tr><th><label for="abc_booking_client_rejected_email_subject">Client email subject (rejected)</label></th><td><input class="regular-text" id="abc_booking_client_rejected_email_subject" name="abc_settings[booking_client_rejected_email_subject]" value="<?php echo $text($s['booking_client_rejected_email_subject']); ?>"></td></tr>
-            <tr><th><label for="abc_booking_client_rejected_email_body">Client email body (rejected)</label></th><td><textarea class="large-text" rows="6" id="abc_booking_client_rejected_email_body" name="abc_settings[booking_client_rejected_email_body]"><?php echo $textarea($s['booking_client_rejected_email_body']); ?></textarea><p class="description">Placeholders: {full_name}, {date}, {time}, {option}, {status}, {site_name}</p></td></tr>
+            <tr><th><label for="abc_booking_client_initial_email_subject"><?php echo esc_html($tr('Client email subject (after booking)', 'Temat e-maila klienta (po rezerwacji)')); ?></label></th><td><input class="regular-text" id="abc_booking_client_initial_email_subject" name="abc_settings[booking_client_initial_email_subject]" value="<?php echo $text($s['booking_client_initial_email_subject']); ?>"></td></tr>
+            <tr><th><label for="abc_booking_client_initial_email_body"><?php echo esc_html($tr('Client email body (after booking)', 'Treść e-maila klienta (po rezerwacji)')); ?></label></th><td><textarea class="large-text" rows="6" id="abc_booking_client_initial_email_body" name="abc_settings[booking_client_initial_email_body]"><?php echo $textarea($s['booking_client_initial_email_body']); ?></textarea><p class="description"><?php echo esc_html($tr('Placeholders: {full_name}, {date}, {time}, {option}, {hours}, {minutes}, {expires}, {site_name}', 'Zmienne: {full_name}, {date}, {time}, {option}, {hours}, {minutes}, {expires}, {site_name}')); ?></p></td></tr>
+            <tr><th><label for="abc_booking_client_expired_email_subject"><?php echo esc_html($tr('Client email subject (hold expired)', 'Temat e-maila klienta (po wygaśnięciu blokady)')); ?></label></th><td><input class="regular-text" id="abc_booking_client_expired_email_subject" name="abc_settings[booking_client_expired_email_subject]" value="<?php echo $text($s['booking_client_expired_email_subject']); ?>"></td></tr>
+            <tr><th><label for="abc_booking_client_expired_email_body"><?php echo esc_html($tr('Client email body (hold expired)', 'Treść e-maila klienta (po wygaśnięciu blokady)')); ?></label></th><td><textarea class="large-text" rows="6" id="abc_booking_client_expired_email_body" name="abc_settings[booking_client_expired_email_body]"><?php echo $textarea($s['booking_client_expired_email_body']); ?></textarea><p class="description"><?php echo esc_html($tr('Placeholders: {full_name}, {date}, {time}, {option}, {hours}, {minutes}, {expires}, {site_name}', 'Zmienne: {full_name}, {date}, {time}, {option}, {hours}, {minutes}, {expires}, {site_name}')); ?></p></td></tr>
+            <tr><th><label for="abc_booking_client_approved_email_subject"><?php echo esc_html($tr('Client email subject (approved)', 'Temat e-maila klienta (zatwierdzona)')); ?></label></th><td><input class="regular-text" id="abc_booking_client_approved_email_subject" name="abc_settings[booking_client_approved_email_subject]" value="<?php echo $text($s['booking_client_approved_email_subject']); ?>"></td></tr>
+            <tr><th><label for="abc_booking_client_approved_email_body"><?php echo esc_html($tr('Client email body (approved)', 'Treść e-maila klienta (zatwierdzona)')); ?></label></th><td><textarea class="large-text" rows="6" id="abc_booking_client_approved_email_body" name="abc_settings[booking_client_approved_email_body]"><?php echo $textarea($s['booking_client_approved_email_body']); ?></textarea><p class="description"><?php echo esc_html($tr('Placeholders: {full_name}, {date}, {time}, {option}, {status}, {site_name}', 'Zmienne: {full_name}, {date}, {time}, {option}, {status}, {site_name}')); ?></p></td></tr>
+            <tr><th><label for="abc_booking_client_rejected_email_subject"><?php echo esc_html($tr('Client email subject (rejected)', 'Temat e-maila klienta (odrzucona)')); ?></label></th><td><input class="regular-text" id="abc_booking_client_rejected_email_subject" name="abc_settings[booking_client_rejected_email_subject]" value="<?php echo $text($s['booking_client_rejected_email_subject']); ?>"></td></tr>
+            <tr><th><label for="abc_booking_client_rejected_email_body"><?php echo esc_html($tr('Client email body (rejected)', 'Treść e-maila klienta (odrzucona)')); ?></label></th><td><textarea class="large-text" rows="6" id="abc_booking_client_rejected_email_body" name="abc_settings[booking_client_rejected_email_body]"><?php echo $textarea($s['booking_client_rejected_email_body']); ?></textarea><p class="description"><?php echo esc_html($tr('Placeholders: {full_name}, {date}, {time}, {option}, {status}, {site_name}', 'Zmienne: {full_name}, {date}, {time}, {option}, {status}, {site_name}')); ?></p></td></tr>
 
-            <tr><th><label for="abc_booking_form_heading">Form heading</label></th><td><input class="regular-text" id="abc_booking_form_heading" name="abc_settings[booking_form_heading]" value="<?php echo $text($s['booking_form_heading']); ?>"></td></tr>
-            <tr><th><label for="abc_booking_form_submit_label">Submit button label</label></th><td><input class="regular-text" id="abc_booking_form_submit_label" name="abc_settings[booking_form_submit_label]" value="<?php echo $text($s['booking_form_submit_label']); ?>"></td></tr>
-            <tr><th><label for="abc_booking_consent_label">Consent label</label></th><td><input class="large-text" id="abc_booking_consent_label" name="abc_settings[booking_consent_label]" value="<?php echo $text($s['booking_consent_label']); ?>"></td></tr>
-            <tr><th><label for="abc_booking_options">Service / Package options</label></th><td><textarea class="large-text" rows="5" id="abc_booking_options" name="abc_settings[booking_options]"><?php echo $textarea($s['booking_options']); ?></textarea><p class="description">One option per line.</p></td></tr>
+            <tr><th><label for="abc_booking_form_heading"><?php echo esc_html($tr('Form heading', 'Nagłówek formularza')); ?></label></th><td><input class="regular-text" id="abc_booking_form_heading" name="abc_settings[booking_form_heading]" value="<?php echo $text($s['booking_form_heading']); ?>"></td></tr>
+            <tr><th><label for="abc_booking_form_submit_label"><?php echo esc_html($tr('Submit button label', 'Etykieta przycisku wyślij')); ?></label></th><td><input class="regular-text" id="abc_booking_form_submit_label" name="abc_settings[booking_form_submit_label]" value="<?php echo $text($s['booking_form_submit_label']); ?>"></td></tr>
+            <tr>
+                <th><label for="abc_booking_consent_label"><?php echo esc_html($tr('Consent label', 'Etykieta zgody')); ?></label></th>
+                <td>
+                    <textarea class="large-text" rows="3" id="abc_booking_consent_label" name="abc_settings[booking_consent_label]"><?php echo $textarea($s['booking_consent_label']); ?></textarea>
+                    <p class="description"><?php echo esc_html($tr('Allowed HTML: links (<a href target rel>).', 'Dozwolony HTML: linki (<a href target rel>).')); ?></p>
+                </td>
+            </tr>
+            <tr><th><label for="abc_booking_options"><?php echo esc_html($tr('Service / Package options', 'Opcje usługi / pakietu')); ?></label></th><td><textarea class="large-text" rows="5" id="abc_booking_options" name="abc_settings[booking_options]"><?php echo $textarea($s['booking_options']); ?></textarea><p class="description"><?php echo esc_html($tr('One option per line.', 'Jedna opcja w linii.')); ?></p></td></tr>
         </table>
         <?php
     }
 
     public static function render_availability_metabox(\WP_Post $post): void {
         $s = self::get_calendar_settings((int) $post->ID);
+        $requests_url = admin_url('edit.php?post_type=' . self::REQUEST_CPT);
         ?>
-        <p>Use manager below to set day statuses and optional notes.</p>
+        <p><?php echo esc_html(self::tr('Use manager below to set day statuses and optional notes.', 'Użyj menedżera poniżej, aby ustawić statusy dni i opcjonalne notatki.')); ?></p>
+        <p class="description"><?php echo wp_kses_post(sprintf(
+            self::tr(
+                'Locked (reserved) dates are grayed out. Release them in <a href="%s">Booking Requests</a>.',
+                'Zablokowane (zarezerwowane) daty są wyszarzone. Zwolnisz je w sekcji <a href="%s">Zapytania rezerwacji</a>.'
+            ),
+            esc_url($requests_url)
+        )); ?></p>
         <textarea id="abc_status_map" name="abc_settings[status_map]" rows="4" class="large-text code" style="display:none;"><?php echo esc_textarea((string) $s['status_map']); ?></textarea>
+        <textarea id="abc_day_mode_map" name="abc_settings[day_mode_map]" rows="4" class="large-text code" style="display:none;"><?php echo esc_textarea((string) ($s['day_mode_map'] ?? '{}')); ?></textarea>
         <textarea id="abc_time_slots_overrides" name="abc_settings[time_slots_overrides]" rows="4" class="large-text code" style="display:none;"><?php echo esc_textarea((string) ($s['time_slots_overrides'] ?? '{}')); ?></textarea>
         <div class="abc-admin-manager"
              data-abc-status-map="<?php echo esc_attr((string) $s['status_map']); ?>"
+             data-abc-day-mode-default="<?php echo esc_attr((string) ($s['day_mode_default'] ?? 'slots')); ?>"
+             data-abc-day-mode-map="<?php echo esc_attr((string) ($s['day_mode_map'] ?? '{}')); ?>"
              data-abc-time-overrides="<?php echo esc_attr((string) ($s['time_slots_overrides'] ?? '{}')); ?>"
              data-abc-time-reservations="<?php echo esc_attr((string) ($s['time_slots_reservations'] ?? '{}')); ?>"
              data-abc-months="<?php echo (int) $s['months_to_show']; ?>"
@@ -255,6 +312,11 @@ trait Rdev_Calendar_Settings_Trait {
             'start_month_offset' => max(-12, min(12, (int) ($incoming['start_month_offset'] ?? $defaults['start_month_offset']))),
             'cta_label' => sanitize_text_field((string) ($incoming['cta_label'] ?? $defaults['cta_label'])),
             'cta_url' => esc_url_raw((string) ($incoming['cta_url'] ?? $defaults['cta_url'])),
+            'day_mode_default' => self::sanitize_choice((string) ($incoming['day_mode_default'] ?? $defaults['day_mode_default']), [
+                'slots' => 'slots',
+                'all_day' => 'all_day',
+                'hybrid' => 'hybrid',
+            ], 'slots'),
             'booking_notification_email' => sanitize_email((string) ($incoming['booking_notification_email'] ?? '')),
             'booking_from_email' => sanitize_email((string) ($incoming['booking_from_email'] ?? '')),
             'booking_from_name' => sanitize_text_field((string) ($incoming['booking_from_name'] ?? '')),
@@ -278,20 +340,36 @@ trait Rdev_Calendar_Settings_Trait {
             'booking_client_rejected_email_body' => sanitize_textarea_field((string) ($incoming['booking_client_rejected_email_body'] ?? $defaults['booking_client_rejected_email_body'])),
             'booking_form_heading' => sanitize_text_field((string) ($incoming['booking_form_heading'] ?? $defaults['booking_form_heading'])),
             'booking_form_submit_label' => sanitize_text_field((string) ($incoming['booking_form_submit_label'] ?? $defaults['booking_form_submit_label'])),
-            'booking_consent_label' => sanitize_text_field((string) ($incoming['booking_consent_label'] ?? $defaults['booking_consent_label'])),
+            'booking_consent_label' => self::sanitize_consent_label((string) ($incoming['booking_consent_label'] ?? $defaults['booking_consent_label'])),
             'booking_options' => sanitize_textarea_field((string) ($incoming['booking_options'] ?? $defaults['booking_options'])),
-            'time_slots_reservations' => (string) get_post_meta($post_id, '_abc_time_slots_reservations', true),
         ];
+
+        $time_overrides_raw = trim((string) wp_unslash($incoming['time_slots_overrides'] ?? '{}'));
+        $time_overrides = self::normalize_time_slots_overrides($time_overrides_raw);
+        $save['time_slots_overrides'] = wp_json_encode(
+            $time_overrides,
+            JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES
+        );
+
+        $day_mode_map_raw = trim((string) wp_unslash($incoming['day_mode_map'] ?? '{}'));
+        $day_mode_map = self::normalize_day_mode_map($day_mode_map_raw);
+        $save['day_mode_map'] = wp_json_encode(
+            $day_mode_map,
+            JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES
+        );
+
+        $time_reservations = self::normalize_time_slot_reservations((string) get_post_meta($post_id, '_abc_time_slots_reservations', true));
+        $save['time_slots_reservations'] = wp_json_encode(
+            $time_reservations,
+            JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES
+        );
 
         $status_map_raw = trim((string) wp_unslash($incoming['status_map'] ?? '{}'));
         $status_map = self::normalize_status_map($status_map_raw);
+        foreach (array_keys($time_reservations) as $reserved_date) {
+            $status_map = self::apply_slot_aggregate_to_status_map($reserved_date, $save, $time_overrides, $time_reservations, $status_map);
+        }
         $save['status_map'] = wp_json_encode($status_map, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
-
-        $time_overrides_raw = trim((string) wp_unslash($incoming['time_slots_overrides'] ?? '{}'));
-        $save['time_slots_overrides'] = wp_json_encode(
-            self::normalize_time_slots_overrides($time_overrides_raw),
-            JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES
-        );
 
         foreach (self::key_map() as $field => $meta_key) {
             update_post_meta($post_id, $meta_key, $save[$field]);
@@ -340,6 +418,19 @@ trait Rdev_Calendar_Settings_Trait {
         return $result;
     }
 
+    private static function sanitize_consent_label(string $value): string {
+        $allowed = [
+            'a' => [
+                'href' => true,
+                'target' => true,
+                'rel' => true,
+            ],
+            'br' => [],
+        ];
+
+        return wp_kses($value, $allowed);
+    }
+
     private static function normalize_time_slots_overrides(string $raw): array {
         $decoded = json_decode(trim($raw) !== '' ? $raw : '{}', true);
         if (! is_array($decoded)) {
@@ -379,7 +470,7 @@ trait Rdev_Calendar_Settings_Trait {
                 continue;
             }
             foreach ($slots as $slot => $entry) {
-                if (! is_string($slot) || ! preg_match('/^(?:[01]\d|2[0-3]):[0-5]\d$/', $slot) || ! is_array($entry)) {
+                if (! is_string($slot) || (! preg_match('/^(?:[01]\d|2[0-3]):[0-5]\d$/', $slot) && $slot !== 'ALL_DAY') || ! is_array($entry)) {
                     continue;
                 }
                 $status = sanitize_text_field((string) ($entry['status'] ?? ''));
@@ -403,6 +494,39 @@ trait Rdev_Calendar_Settings_Trait {
         }
         ksort($out);
         return $out;
+    }
+
+    private static function normalize_day_mode_map(string $raw): array {
+        $decoded = json_decode(trim($raw) !== '' ? $raw : '{}', true);
+        if (! is_array($decoded)) {
+            return [];
+        }
+        $out = [];
+        foreach ($decoded as $date => $mode) {
+            if (! is_string($date) || ! preg_match('/^\d{4}-\d{2}-\d{2}$/', $date)) {
+                continue;
+            }
+            $value = self::sanitize_choice((string) $mode, [
+                'slots' => 'slots',
+                'all_day' => 'all_day',
+            ], '');
+            if ($value !== '') {
+                $out[$date] = $value;
+            }
+        }
+        ksort($out);
+        return $out;
+    }
+
+    private static function resolve_day_mode(string $date, array $settings, array $day_mode_map): string {
+        if (isset($day_mode_map[$date]) && in_array((string) $day_mode_map[$date], ['slots', 'all_day'], true)) {
+            return (string) $day_mode_map[$date];
+        }
+        $default = (string) ($settings['day_mode_default'] ?? 'slots');
+        if ($default === 'all_day') {
+            return 'all_day';
+        }
+        return 'slots';
     }
 
     private static function get_date_slots(string $date, array $settings, array $overrides): array {
@@ -431,7 +555,9 @@ trait Rdev_Calendar_Settings_Trait {
         if (! preg_match('/^\d{4}-\d{2}-\d{2}$/', $date)) {
             return $status_map;
         }
-        $slots = self::get_date_slots($date, $settings, $overrides);
+        $day_mode_map = self::normalize_day_mode_map((string) ($settings['day_mode_map'] ?? '{}'));
+        $resolved_day_mode = self::resolve_day_mode($date, $settings, $day_mode_map);
+        $slots = $resolved_day_mode === 'all_day' ? ['ALL_DAY'] : self::get_date_slots($date, $settings, $overrides);
         if (empty($slots)) {
             return $status_map;
         }

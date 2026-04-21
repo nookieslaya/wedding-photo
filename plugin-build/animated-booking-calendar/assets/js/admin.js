@@ -4,14 +4,19 @@
     const value = I18N[key];
     return typeof value === 'string' && value.trim() !== '' ? value : fallback;
   };
+  const fmt = (template, vars = {}) => String(template || '').replace(/\{([a-z_]+)\}/gi, (m, key) => {
+    if (Object.prototype.hasOwnProperty.call(vars, key)) return String(vars[key]);
+    return m;
+  });
+  const locale = typeof I18N.locale === 'string' && I18N.locale.trim() !== '' ? I18N.locale : 'en-US';
   const tWeekdays = Array.isArray(I18N.weekdays) && I18N.weekdays.length === 7
     ? I18N.weekdays
-    : ['Pon', 'Wt', 'Śr', 'Czw', 'Pt', 'Sob', 'Nd'];
+    : ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 
   const STATUSS = [
-    ['available', t('status_available', 'Dostępny')],
-    ['tentative', t('status_tentative', 'Wstępna')],
-    ['booked', t('status_booked', 'Zajęty')],
+    ['available', t('status_available', 'Available')],
+    ['tentative', t('status_tentative', 'Tentative')],
+    ['booked', t('status_booked', 'Booked')],
   ];
 
   const parseMap = (raw) => {
@@ -36,6 +41,21 @@
     try {
       const parsed = JSON.parse(String(raw || '{}'));
       return parsed && typeof parsed === 'object' && !Array.isArray(parsed) ? parsed : {};
+    } catch (_e) {
+      return {};
+    }
+  };
+
+  const parseDayModeMap = (raw) => {
+    try {
+      const parsed = JSON.parse(String(raw || '{}'));
+      if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) return {};
+      const out = {};
+      Object.entries(parsed).forEach(([date, mode]) => {
+        if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) return;
+        if (mode === 'slots' || mode === 'all_day') out[date] = mode;
+      });
+      return out;
     } catch (_e) {
       return {};
     }
@@ -90,6 +110,7 @@
     host.dataset.ready = '1';
 
     const storage = document.getElementById('abc_status_map');
+    const dayModeStorage = document.getElementById('abc_day_mode_map');
     const overridesStorage = document.getElementById('abc_time_slots_overrides');
     if (!storage) return;
 
@@ -97,6 +118,11 @@
       map: normalize(parseMap(storage.value || host.dataset.abcStatusMap || '{}')),
       timeOverrides: {},
       timeReservations: {},
+      dayModeMap: {},
+      selectedDayMode: 'slots',
+      dayModeDefault: ['slots', 'all_day', 'hybrid'].includes(String(host.dataset.abcDayModeDefault || 'slots'))
+        ? String(host.dataset.abcDayModeDefault || 'slots')
+        : 'slots',
       monthIndex: 0,
       selectedStatus: 'booked',
       selectedDates: new Set(),
@@ -104,6 +130,7 @@
     };
 
     const parsedOverrides = parseOverrides((overridesStorage && overridesStorage.value) || host.dataset.abcTimeOverrides || '{}');
+    state.dayModeMap = parseDayModeMap((dayModeStorage && dayModeStorage.value) || host.dataset.abcDayModeMap || '{}');
     Object.entries(parsedOverrides || {}).forEach(([date, slots]) => {
       if (!/^\d{4}-\d{2}-\d{2}$/.test(date) || !Array.isArray(slots)) return;
       const valid = [...new Set(slots
@@ -117,7 +144,7 @@
       if (!/^\d{4}-\d{2}-\d{2}$/.test(date) || !slots || typeof slots !== 'object' || Array.isArray(slots)) return;
       const perDate = {};
       Object.entries(slots).forEach(([slot, entry]) => {
-        if (!/^(?:[01]\d|2[0-3]):[0-5]\d$/.test(String(slot))) return;
+        if (!/^(?:[01]\d|2[0-3]):[0-5]\d$/.test(String(slot)) && String(slot) !== 'ALL_DAY') return;
         if (!entry || typeof entry !== 'object' || Array.isArray(entry)) return;
         const status = String(entry.status || '');
         if (!['hold', 'booked'].includes(status)) return;
@@ -155,16 +182,20 @@
           <div class="abc-admin-statuses" data-statuses>
             ${STATUSS.map(([k, l]) => `<button type="button" class="button" data-status="${k}">${l}</button>`).join('')}
           </div>
-          <input type="text" data-note placeholder="Notatka (opcjonalnie)">
+          <input type="text" data-note placeholder="${t('note_optional', 'Note (optional)')}">
           <div class="abc-admin-actions">
-            <button type="button" class="button button-primary" data-apply>Zastosuj do zaznaczonych</button>
-            <button type="button" class="button" data-clear>${t('clear_selected', 'Wyczyść zaznaczone')}</button>
-            <button type="button" class="button" data-unselect>Odznacz wszystko</button>
+            <button type="button" class="button button-primary" data-apply>${t('apply_selected', 'Apply to selected')}</button>
+            <button type="button" class="button" data-clear>${t('clear_selected', 'Clear selected')}</button>
+            <button type="button" class="button" data-unselect>${t('unselect_all', 'Unselect all')}</button>
+          </div>
+          <div class="abc-admin-statuses" data-day-modes>
+            <button type="button" class="button" data-day-mode="slots">${t('mode_slots', 'Hours')}</button>
+            <button type="button" class="button" data-day-mode="all_day">${t('mode_all_day', 'Full day')}</button>
           </div>
           <div class="abc-admin-time-tools">
-            <input type="text" data-time-slot placeholder="${t('time_placeholder', 'Godzina HH:MM')}">
-            <button type="button" class="button" data-time-add>${t('time_add', 'Dodaj godzinę do zaznaczonych dni')}</button>
-            <button type="button" class="button" data-time-remove>${t('time_remove', 'Usuń godzinę z zaznaczonych dni')}</button>
+            <input type="text" data-time-slot placeholder="${t('time_placeholder', 'Time HH:MM')}">
+            <button type="button" class="button" data-time-add>${t('time_add', 'Add time to selected dates')}</button>
+            <button type="button" class="button" data-time-remove>${t('time_remove', 'Remove time from selected dates')}</button>
           </div>
           <div class="abc-admin-time-preview" data-time-preview></div>
         </div>
@@ -177,13 +208,14 @@
     const monthLabel = host.querySelector('[data-month]');
     const daysGrid = host.querySelector('[data-days]');
     const statuses = host.querySelector('[data-statuses]');
+    const dayModes = host.querySelector('[data-day-modes]');
     const noteInput = host.querySelector('[data-note]');
     const timeInput = host.querySelector('[data-time-slot]');
     const timePreview = host.querySelector('[data-time-preview]');
     const summary = host.querySelector('[data-summary]');
     const defaultSlotsInput = document.getElementById('abc_booking_default_time_slots');
 
-    const monthFormatter = new Intl.DateTimeFormat('pl-PL', { month: 'long', year: 'numeric' });
+    const monthFormatter = new Intl.DateTimeFormat(locale, { month: 'long', year: 'numeric' });
 
     const save = () => {
       const sorted = Object.keys(state.map).sort().reduce((acc, key) => {
@@ -201,11 +233,23 @@
         overridesStorage.value = JSON.stringify(sortedOverrides);
         overridesStorage.dispatchEvent(new Event('change', { bubbles: true }));
       }
+      if (dayModeStorage) {
+        const sortedDayModes = Object.keys(state.dayModeMap).sort().reduce((acc, key) => {
+          acc[key] = state.dayModeMap[key];
+          return acc;
+        }, {});
+        dayModeStorage.value = JSON.stringify(sortedDayModes);
+        dayModeStorage.dispatchEvent(new Event('change', { bubbles: true }));
+      }
     };
 
     const getDefaultSlots = () => parseTimeSlots(defaultSlotsInput ? defaultSlotsInput.value : '');
 
     const getDateSlots = (dateKey) => {
+      if ((state.dayModeMap[dateKey] || (state.dayModeDefault === 'all_day' ? 'all_day' : 'slots')) === 'all_day') {
+        const hasAnyReservation = state.timeReservations[dateKey] && Object.keys(state.timeReservations[dateKey]).length > 0;
+        return hasAnyReservation ? [] : ['ALL_DAY'];
+      }
       if (Array.isArray(state.timeOverrides[dateKey])) {
         return [...state.timeOverrides[dateKey]].sort();
       }
@@ -233,35 +277,42 @@
       });
       return reserved;
     };
+    const isDateLocked = (dateKey) => {
+      const configured = getDateSlots(dateKey);
+      const reserved = getReservedSlots(dateKey);
+      if (reserved.size === 0) return false;
+      const free = configured.filter((slot) => !reserved.has(slot));
+      return free.length === 0;
+    };
 
     const renderTimePreview = () => {
       if (!(timePreview instanceof HTMLElement)) return;
       if (state.selectedDates.size === 0) {
-        timePreview.innerHTML = `<strong>${t('time_preview_title', 'Podgląd godzin:')}</strong> ${t('select_one_date', 'Zaznacz jedną datę, aby zobaczyć dostępne godziny.')}`;
+        timePreview.innerHTML = `<strong>${t('time_preview_title', 'Hours preview:')}</strong> ${t('select_one_date', 'Select one date to preview available hours.')}`;
         return;
       }
       if (state.selectedDates.size > 1) {
-        timePreview.innerHTML = `<strong>${t('time_preview_title', 'Podgląd godzin:')}</strong> ${t('select_single_date', 'Zaznaczono kilka dat. Podgląd działa dla jednej daty naraz.')}`;
+        timePreview.innerHTML = `<strong>${t('time_preview_title', 'Hours preview:')}</strong> ${t('select_single_date', 'Multiple dates selected. Preview works for one date at a time.')}`;
         return;
       }
 
       const [dateKey] = [...state.selectedDates];
       const configured = getDateSlots(dateKey);
       if (configured.length === 0) {
-        timePreview.innerHTML = `<strong>${t('time_preview_title', 'Podgląd godzin:')} ${dateKey}</strong> ${t('no_configured_hours', 'Brak skonfigurowanych godzin.')}`;
+        timePreview.innerHTML = `<strong>${t('time_preview_title', 'Hours preview:')} ${dateKey}</strong> ${t('no_configured_hours', 'No configured hours.')}`;
         return;
       }
 
       const reserved = getReservedSlots(dateKey);
       const available = configured.filter((slot) => !reserved.has(slot));
-      const availableHtml = available.length > 0 ? available.join(', ') : t('no_free_hours', 'Brak wolnych godzin');
+      const availableHtml = available.length > 0 ? available.join(', ') : t('no_free_hours', 'No free hours');
       const reservedList = configured.filter((slot) => reserved.has(slot));
-      const reservedHtml = reservedList.length > 0 ? reservedList.join(', ') : t('none', 'Brak');
+      const reservedHtml = reservedList.length > 0 ? reservedList.join(', ') : t('none', 'None');
 
       timePreview.innerHTML = `
-        <strong>${t('time_preview_title', 'Podgląd godzin:')} ${dateKey}</strong><br>
-        <span><strong>${t('available', 'Dostępne:')}</strong> ${availableHtml}</span><br>
-        <span><strong>${t('busy_hold', 'Zajęte / hold:')}</strong> ${reservedHtml}</span>
+        <strong>${t('time_preview_title', 'Hours preview:')} ${dateKey}</strong><br>
+        <span><strong>${t('available', 'Available:')}</strong> ${availableHtml}</span><br>
+        <span><strong>${t('busy_hold', 'Booked / hold:')}</strong> ${reservedHtml}</span>
       `;
     };
 
@@ -270,14 +321,20 @@
       const total = Object.keys(state.map).length;
       const overrides = Object.keys(state.timeOverrides).length;
       summary.textContent = selectedCount > 0
-        ? `${t('summary_selected_prefix', 'Zaznaczono:')} ${selectedCount} · ${t('summary_status', 'Status:')} ${state.selectedStatus}`
-        : `${t('summary_idle', 'Kliknij dni i zastosuj status. Zapisane:')} ${total} · ${t('summary_overrides', 'Nadpisania godzin:')} ${overrides}`;
+        ? `${t('summary_selected_prefix', 'Selected:')} ${selectedCount} · ${t('summary_status', 'Status:')} ${state.selectedStatus}`
+        : `${t('summary_idle', 'Click days and apply status. Saved:')} ${total} · ${t('summary_overrides', 'Time overrides:')} ${overrides}`;
       renderTimePreview();
     };
 
     const renderStatusButtons = () => {
       statuses.querySelectorAll('button[data-status]').forEach((btn) => {
         btn.classList.toggle('is-selected', btn.dataset.status === state.selectedStatus);
+      });
+    };
+
+    const renderDayModeButtons = () => {
+      dayModes?.querySelectorAll('button[data-day-mode]').forEach((btn) => {
+        btn.classList.toggle('is-selected', btn.dataset.dayMode === state.selectedDayMode);
       });
     };
 
@@ -301,8 +358,11 @@
       for (let d = 1; d <= daysInMonth; d += 1) {
         const key = toDateKey(new Date(y, m, d));
         const status = state.map[key]?.status || 'none';
+        const locked = isDateLocked(key);
+        const lockClass = locked ? ' is-locked' : '';
+        const lockAttr = locked ? ' data-locked="1"' : '';
         const picked = state.selectedDates.has(key) ? ' is-picked' : '';
-        cells.push(`<button type="button" class="abc-admin-day is-${status}${picked}" data-day="${key}">${d}</button>`);
+        cells.push(`<button type="button" class="abc-admin-day is-${status}${picked}${lockClass}" data-day="${key}"${lockAttr}>${d}</button>`);
       }
       while (cells.length < 42) {
         cells.push('<button type="button" class="abc-admin-day is-muted" disabled>·</button>');
@@ -339,6 +399,16 @@
       renderSummary();
     });
 
+    dayModes?.addEventListener('click', (e) => {
+      const target = e.target;
+      if (!(target instanceof HTMLElement)) return;
+      const btn = target.closest('button[data-day-mode]');
+      if (!(btn instanceof HTMLElement)) return;
+      const mode = String(btn.dataset.dayMode || 'slots');
+      state.selectedDayMode = mode === 'all_day' ? 'all_day' : 'slots';
+      renderDayModeButtons();
+    });
+
     noteInput?.addEventListener('input', () => {
       state.note = noteInput.value.trim();
     });
@@ -350,6 +420,10 @@
       if (!(btn instanceof HTMLElement)) return;
       const key = btn.dataset.day || '';
       if (!key) return;
+      if (btn.dataset.locked === '1') {
+        window.alert(t('locked_date_click_info', 'This date is locked by an active reservation. To release it, go to Booking Requests and use "Release date".'));
+        return;
+      }
 
       if (state.selectedDates.has(key)) state.selectedDates.delete(key);
       else state.selectedDates.add(key);
@@ -359,22 +433,42 @@
 
     host.querySelector('[data-apply]')?.addEventListener('click', () => {
       if (state.selectedDates.size === 0) return;
+      let skipped = 0;
       state.selectedDates.forEach((key) => {
+        if (isDateLocked(key)) {
+          skipped += 1;
+          return;
+        }
         state.map[key] = { status: state.selectedStatus, note: state.note };
+        state.dayModeMap[key] = state.selectedDayMode;
+        if (state.selectedDayMode === 'all_day') {
+          delete state.timeOverrides[key];
+        }
       });
       state.selectedDates.clear();
       save();
       renderMonth();
+      if (skipped > 0) {
+        window.alert(fmt(t('locked_dates_skipped', 'Some selected dates are locked by active reservations and were skipped ({count}).'), { count: skipped }));
+      }
     });
 
     host.querySelector('[data-clear]')?.addEventListener('click', () => {
       if (state.selectedDates.size === 0) return;
+      let skipped = 0;
       state.selectedDates.forEach((key) => {
+        if (isDateLocked(key)) {
+          skipped += 1;
+          return;
+        }
         delete state.map[key];
       });
       state.selectedDates.clear();
       save();
       renderMonth();
+      if (skipped > 0) {
+        window.alert(fmt(t('locked_dates_skipped', 'Some selected dates are locked by active reservations and were skipped ({count}).'), { count: skipped }));
+      }
     });
 
     host.querySelector('[data-unselect]')?.addEventListener('click', () => {
@@ -385,18 +479,31 @@
     host.querySelector('[data-time-add]')?.addEventListener('click', () => {
       const slot = String(timeInput?.value || '').trim();
       if (!/^(?:[01]\d|2[0-3]):[0-5]\d$/.test(slot) || state.selectedDates.size === 0) return;
+      let skipped = 0;
       state.selectedDates.forEach((date) => {
+        if (isDateLocked(date)) {
+          skipped += 1;
+          return;
+        }
         const current = Array.isArray(state.timeOverrides[date]) ? state.timeOverrides[date] : [];
         state.timeOverrides[date] = [...new Set(current.concat([slot]))].sort();
       });
       save();
       renderSummary();
+      if (skipped > 0) {
+        window.alert(fmt(t('locked_dates_skipped', 'Some selected dates are locked by active reservations and were skipped ({count}).'), { count: skipped }));
+      }
     });
 
     host.querySelector('[data-time-remove]')?.addEventListener('click', () => {
       const slot = String(timeInput?.value || '').trim();
       if (!/^(?:[01]\d|2[0-3]):[0-5]\d$/.test(slot) || state.selectedDates.size === 0) return;
+      let skipped = 0;
       state.selectedDates.forEach((date) => {
+        if (isDateLocked(date)) {
+          skipped += 1;
+          return;
+        }
         const current = Array.isArray(state.timeOverrides[date]) ? state.timeOverrides[date] : [];
         const next = current.filter((v) => v !== slot);
         if (next.length > 0) state.timeOverrides[date] = next;
@@ -404,9 +511,13 @@
       });
       save();
       renderSummary();
+      if (skipped > 0) {
+        window.alert(fmt(t('locked_dates_skipped', 'Some selected dates are locked by active reservations and were skipped ({count}).'), { count: skipped }));
+      }
     });
 
     renderStatusButtons();
+    renderDayModeButtons();
     renderMonth();
   };
 

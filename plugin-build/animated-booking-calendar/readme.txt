@@ -13,6 +13,8 @@ Professional booking calendar for WordPress with availability management, tempor
 
 rdev-calendar is a standalone WordPress booking calendar designed for service businesses (photo/video events, sessions, appointments, etc.).
 
+PHP compatibility: 7.1 or newer.
+
 Main capabilities:
 
 * Visual availability calendar with statuses (`available`, `tentative`, `booked`)

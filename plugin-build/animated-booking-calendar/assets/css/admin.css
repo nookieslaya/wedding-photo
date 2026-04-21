@@ -79,5 +79,10 @@
 .abc-admin-day.is-tentative { border-color: #fcd34d; background: #fef3c7; }
 .abc-admin-day.is-booked { border-color: #fca5a5; background: #fee2e2; }
 .abc-admin-day.is-picked { outline: 2px solid #111827; outline-offset: -2px; }
+.abc-admin-day.is-locked {
+  filter: grayscale(.55) saturate(.7);
+  opacity: .66;
+  cursor: not-allowed;
+}
 
 .abc-admin-summary { margin: 10px 0 0; font-size: 12px; color: #374151; }

@@ -22,16 +22,16 @@ trait Rdev_Calendar_Booking_Trait {
         };
 
         if ($calendar_id <= 0) {
-            $go(0, 'error', 'Brak kalendarza.');
+            $go(0, 'error', self::tr('Missing calendar.', 'Brak kalendarza.'));
         }
 
         if (! isset($_POST['abc_nonce']) || ! wp_verify_nonce((string) $_POST['abc_nonce'], 'abc_submit_booking_request_' . $calendar_id)) {
-            $go($calendar_id, 'error', 'Niepoprawny token formularza.');
+            $go($calendar_id, 'error', self::tr('Invalid form token.', 'Niepoprawny token formularza.'));
         }
 
         $honeypot = trim((string) ($_POST['abc_honeypot'] ?? ''));
         if ($honeypot !== '') {
-            $go($calendar_id, 'success', 'Dziękuję.');
+            $go($calendar_id, 'success', self::tr('Thank you.', 'Dziękuję.'));
         }
 
         $settings = self::get_calendar_settings($calendar_id);
@@ -39,6 +39,7 @@ trait Rdev_Calendar_Booking_Trait {
 
         $date = sanitize_text_field((string) ($_POST['abc_date'] ?? ''));
         $time_slot = sanitize_text_field((string) ($_POST['abc_time'] ?? ''));
+        $is_all_day = ! empty($_POST['abc_is_all_day']) && in_array((string) $_POST['abc_is_all_day'], ['1', 'true', 'on'], true);
         $full_name = sanitize_text_field((string) ($_POST['abc_full_name'] ?? ''));
         $option = sanitize_text_field((string) ($_POST['abc_option'] ?? ''));
         $email = sanitize_email((string) ($_POST['abc_email'] ?? ''));
@@ -46,41 +47,88 @@ trait Rdev_Calendar_Booking_Trait {
         $message = sanitize_textarea_field((string) ($_POST['abc_message'] ?? ''));
         $consent = ! empty($_POST['abc_consent']);
 
-        if (! preg_match('/^\d{4}-\d{2}-\d{2}$/', $date) || ! preg_match('/^(?:[01]\d|2[0-3]):[0-5]\d$/', $time_slot) || $full_name === '' || $option === '' || $email === '' || $phone === '' || ! $consent) {
-            $go($calendar_id, 'error', 'Uzupełnij wszystkie wymagane pola.');
+        if ($is_all_day) {
+            $time_slot = 'ALL_DAY';
+        }
+
+        if (! preg_match('/^\d{4}-\d{2}-\d{2}$/', $date) || (! $is_all_day && ! preg_match('/^(?:[01]\d|2[0-3]):[0-5]\d$/', $time_slot)) || $full_name === '' || $option === '' || $email === '' || $phone === '' || ! $consent) {
+            $go($calendar_id, 'error', self::tr('Please fill all required fields.', 'Uzupełnij wszystkie wymagane pola.'));
         }
         if (! is_email($email)) {
-            $go($calendar_id, 'error', 'Podaj poprawny adres e-mail.');
+            $go($calendar_id, 'error', self::tr('Provide a valid email address.', 'Podaj poprawny adres e-mail.'));
         }
 
         $options = self::parse_options((string) $settings['booking_options']);
         if (! in_array($option, $options, true)) {
-            $go($calendar_id, 'error', 'Nieprawidłowy pakiet.');
+            $go($calendar_id, 'error', self::tr('Invalid package.', 'Nieprawidłowy pakiet.'));
         }
 
         $day = self::resolve_day_status($date, $status_map);
         if (($day['status'] ?? 'none') !== 'available') {
-            $go($calendar_id, 'error', 'Ten termin nie jest już dostępny.');
+            $go($calendar_id, 'error', self::tr('This date is no longer available.', 'Ten termin nie jest już dostępny.'));
+        }
+
+        $day_mode_map = self::normalize_day_mode_map((string) get_post_meta($calendar_id, '_abc_day_mode_map', true));
+        $resolved_day_mode = self::resolve_day_mode($date, $settings, $day_mode_map);
+        if ($resolved_day_mode === 'all_day' && ! $is_all_day) {
+            $is_all_day = true;
+            $time_slot = 'ALL_DAY';
+        } elseif ($resolved_day_mode === 'slots' && $is_all_day) {
+            $go($calendar_id, 'error', self::tr('This date accepts hourly booking only.', 'Ten termin przyjmuje wyłącznie rezerwacje godzinowe.'));
         }
 
         $time_overrides = self::normalize_time_slots_overrides((string) get_post_meta($calendar_id, '_abc_time_slots_overrides', true));
         $time_reservations = self::normalize_time_slot_reservations((string) get_post_meta($calendar_id, '_abc_time_slots_reservations', true));
-        $day_slots = self::get_date_slots($date, $settings, $time_overrides);
-        if (empty($day_slots)) {
-            $go($calendar_id, 'error', 'Brak dostępnych godzin dla wybranej daty.');
+        $day_slots = $is_all_day ? ['ALL_DAY'] : self::get_date_slots($date, $settings, $time_overrides);
+        if (! $is_all_day) {
+            if (empty($day_slots)) {
+                $go($calendar_id, 'error', self::tr('No available time slots for selected date.', 'Brak dostępnych godzin dla wybranej daty.'));
+            }
+            if (! in_array($time_slot, $day_slots, true)) {
+                $go($calendar_id, 'error', self::tr('Selected time is not available for this date.', 'Wybrana godzina nie jest dostępna dla tej daty.'));
+            }
+            $existing_all_day = $time_reservations[$date]['ALL_DAY'] ?? null;
+            if (is_array($existing_all_day)) {
+                $slot_status = (string) ($existing_all_day['status'] ?? '');
+                $slot_expires = (int) ($existing_all_day['expires_at'] ?? 0);
+                if ($slot_status === 'booked') {
+                    $go($calendar_id, 'error', self::tr('Selected date is already booked as full day.', 'Wybrana data jest już zajęta jako cały dzień.'));
+                }
+                if ($slot_status === 'hold' && ($slot_expires <= 0 || $slot_expires > time())) {
+                    $go($calendar_id, 'error', self::tr('Selected date is temporarily held as full day.', 'Wybrana data jest chwilowo zarezerwowana jako cały dzień.'));
+                }
+            }
         }
-        if (! in_array($time_slot, $day_slots, true)) {
-            $go($calendar_id, 'error', 'Wybrana godzina nie jest dostępna dla tej daty.');
+
+        if ($is_all_day) {
+            $existing_day = isset($time_reservations[$date]) && is_array($time_reservations[$date]) ? $time_reservations[$date] : [];
+            foreach ($existing_day as $slot_key => $slot_entry) {
+                if (! is_array($slot_entry)) {
+                    continue;
+                }
+                $slot_status = (string) ($slot_entry['status'] ?? '');
+                $slot_expires = (int) ($slot_entry['expires_at'] ?? 0);
+                if ($slot_status === 'booked') {
+                    $go($calendar_id, 'error', self::tr('Selected date is already booked.', 'Wybrana data jest już zajęta.'));
+                }
+                if ($slot_status === 'hold' && ($slot_expires <= 0 || $slot_expires > time())) {
+                    $go($calendar_id, 'error', self::tr('Selected date is temporarily held.', 'Wybrana data jest chwilowo zarezerwowana.'));
+                }
+                unset($time_reservations[$date][$slot_key]);
+            }
+            if (isset($time_reservations[$date]) && empty($time_reservations[$date])) {
+                unset($time_reservations[$date]);
+            }
         }
         $existing_slot = $time_reservations[$date][$time_slot] ?? null;
         if (is_array($existing_slot)) {
             $slot_status = (string) ($existing_slot['status'] ?? '');
             $slot_expires = (int) ($existing_slot['expires_at'] ?? 0);
             if ($slot_status === 'booked') {
-                $go($calendar_id, 'error', 'Wybrana godzina jest już zajęta.');
+                $go($calendar_id, 'error', self::tr('Selected time is already booked.', 'Wybrana godzina jest już zajęta.'));
             }
             if ($slot_status === 'hold' && ($slot_expires <= 0 || $slot_expires > time())) {
-                $go($calendar_id, 'error', 'Wybrana godzina jest chwilowo zarezerwowana.');
+                $go($calendar_id, 'error', self::tr('Selected time is temporarily held.', 'Wybrana godzina jest chwilowo zarezerwowana.'));
             }
             unset($time_reservations[$date][$time_slot]);
         }
@@ -94,12 +142,12 @@ trait Rdev_Calendar_Booking_Trait {
         $request_id = wp_insert_post([
             'post_type' => self::REQUEST_CPT,
             'post_status' => 'publish',
-            'post_title' => wp_strip_all_tags($date . ' ' . $time_slot . ' — ' . $full_name . ' — ' . $option),
+            'post_title' => wp_strip_all_tags($date . ' ' . ($is_all_day ? self::tr('ALL DAY', 'CAŁY DZIEŃ') : $time_slot) . ' — ' . $full_name . ' — ' . $option),
             'post_content' => $message,
         ], true);
 
         if (is_wp_error($request_id) || ! $request_id) {
-            $go($calendar_id, 'error', 'Nie udało się zapisać zgłoszenia.');
+            $go($calendar_id, 'error', self::tr('Could not save your request.', 'Nie udało się zapisać zgłoszenia.'));
         }
 
         update_post_meta($request_id, '_abc_status', 'hold');
@@ -108,6 +156,7 @@ trait Rdev_Calendar_Booking_Trait {
         update_post_meta($request_id, '_abc_calendar_id', $calendar_id);
         update_post_meta($request_id, '_abc_date', $date);
         update_post_meta($request_id, '_abc_time', $time_slot);
+        update_post_meta($request_id, '_abc_is_all_day', $is_all_day ? '1' : '0');
         update_post_meta($request_id, '_abc_option', $option);
         update_post_meta($request_id, '_abc_full_name', $full_name);
         update_post_meta($request_id, '_abc_email', $email);
@@ -131,19 +180,19 @@ trait Rdev_Calendar_Booking_Trait {
             $notify = (string) get_option('admin_email');
         }
 
-        $admin_subject = 'Nowe zapytanie rezerwacji: ' . $date;
+        $admin_subject = self::tr('New booking request: ', 'Nowe zapytanie rezerwacji: ') . $date;
         $admin_body = implode("\n", [
-            'Nowe zapytanie rezerwacji',
+            self::tr('New booking request', 'Nowe zapytanie rezerwacji'),
             '------------------------',
-            'Data: ' . $date,
-            'Godzina: ' . $time_slot,
-            'Usługa / Pakiet: ' . $option,
-            'Imię i nazwisko: ' . $full_name,
-            'E-mail: ' . $email,
-            'Telefon: ' . $phone,
-            'Hold do: ' . $expires_human,
+            self::tr('Date: ', 'Data: ') . $date,
+            self::tr('Time: ', 'Godzina: ') . ($is_all_day ? self::tr('Full day', 'Cały dzień') : $time_slot),
+            self::tr('Service / Package: ', 'Usługa / Pakiet: ') . $option,
+            self::tr('Full name: ', 'Imię i nazwisko: ') . $full_name,
+            self::tr('Email: ', 'E-mail: ') . $email,
+            self::tr('Phone: ', 'Telefon: ') . $phone,
+            self::tr('Hold until: ', 'Hold do: ') . $expires_human,
             '',
-            'Wiadomość:',
+            self::tr('Message:', 'Wiadomość:'),
             $message !== '' ? $message : '-',
         ]);
         $mail_headers = self::mail_headers($settings);
@@ -255,10 +304,10 @@ trait Rdev_Calendar_Booking_Trait {
                 $subject_tpl = trim((string) get_post_meta($request_id, '_abc_expired_email_subject_template', true));
                 $body_tpl = trim((string) get_post_meta($request_id, '_abc_expired_email_body_template', true));
                 if ($subject_tpl === '') {
-                    $subject_tpl = 'Wstępna rezerwacja wygasła';
+                    $subject_tpl = self::tr('Tentative booking expired', 'Wstępna rezerwacja wygasła');
                 }
                 if ($body_tpl === '') {
-                    $body_tpl = "Cześć {full_name},\n\nWstępna rezerwacja terminu wygasła (brak potwierdzenia).\nData: {date}\nGodzina: {time}\nUsługa / Pakiet: {option}\nCzas holda: {hours}h ({minutes} min)\nWygasła: {expires}\n\nJeśli termin jest nadal aktualny, wyślij nowe zapytanie.\n\n{site_name}";
+                    $body_tpl = self::tr("Hi {full_name},\n\nYour tentative booking has expired (no confirmation).\nDate: {date}\nTime: {time}\nService / Package: {option}\nHold duration: {hours}h ({minutes} min)\nExpired at: {expires}\n\nIf you are still interested, please submit a new request.\n\n{site_name}", "Cześć {full_name},\n\nWstępna rezerwacja terminu wygasła (brak potwierdzenia).\nData: {date}\nGodzina: {time}\nUsługa / Pakiet: {option}\nCzas holda: {hours}h ({minutes} min)\nWygasła: {expires}\n\nJeśli termin jest nadal aktualny, wyślij nowe zapytanie.\n\n{site_name}");
                 }
 
                 $ctx = [
