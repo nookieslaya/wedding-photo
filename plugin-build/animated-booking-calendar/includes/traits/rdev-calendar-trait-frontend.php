@@ -38,6 +38,9 @@ trait Rdev_Calendar_Frontend_Trait {
 
         $s = self::get_calendar_settings($calendar_id);
         $status_map = self::normalize_status_map((string) $s['status_map']);
+        $time_overrides = self::normalize_time_slots_overrides((string) ($s['time_slots_overrides'] ?? '{}'));
+        $time_reservations = self::normalize_time_slot_reservations((string) ($s['time_slots_reservations'] ?? '{}'));
+        $default_time_slots = self::parse_time_slots((string) ($s['booking_default_time_slots'] ?? ''));
 
         wp_enqueue_style('abc-frontend');
         wp_enqueue_script('abc-frontend');
@@ -89,7 +92,10 @@ trait Rdev_Calendar_Frontend_Trait {
                     data-abc-calendar-id="<?php echo (int) $calendar_id; ?>"
                     data-abc-months="<?php echo (int) $s['months_to_show']; ?>"
                     data-abc-offset="<?php echo (int) $s['start_month_offset']; ?>"
-                    data-abc-status-map="<?php echo esc_attr(wp_json_encode($status_map)); ?>">
+                    data-abc-status-map="<?php echo esc_attr(wp_json_encode($status_map)); ?>"
+                    data-abc-time-default="<?php echo esc_attr(wp_json_encode($default_time_slots)); ?>"
+                    data-abc-time-overrides="<?php echo esc_attr(wp_json_encode($time_overrides)); ?>"
+                    data-abc-time-reservations="<?php echo esc_attr(wp_json_encode($time_reservations)); ?>">
 
                     <div class="abc-nav">
                         <button type="button" data-abc-prev aria-label="Prev">←</button>
@@ -122,6 +128,11 @@ trait Rdev_Calendar_Frontend_Trait {
                                 <label>Data wydarzenia *
                                     <input type="text" name="abc_date_display" data-abc-date-display readonly>
                                     <input type="hidden" name="abc_date" data-abc-date>
+                                </label>
+                                <label>Godzina *
+                                    <select name="abc_time" data-abc-time-select required>
+                                        <option value="">Wybierz godzinę</option>
+                                    </select>
                                 </label>
                                 <label>Imię i nazwisko *<input type="text" name="abc_full_name" required maxlength="120"></label>
                                 <label>Usługa / Pakiet *

@@ -38,6 +38,7 @@ trait Rdev_Calendar_Booking_Trait {
         $status_map = self::normalize_status_map((string) $settings['status_map']);
 
         $date = sanitize_text_field((string) ($_POST['abc_date'] ?? ''));
+        $time_slot = sanitize_text_field((string) ($_POST['abc_time'] ?? ''));
         $full_name = sanitize_text_field((string) ($_POST['abc_full_name'] ?? ''));
         $option = sanitize_text_field((string) ($_POST['abc_option'] ?? ''));
         $email = sanitize_email((string) ($_POST['abc_email'] ?? ''));
@@ -45,7 +46,7 @@ trait Rdev_Calendar_Booking_Trait {
         $message = sanitize_textarea_field((string) ($_POST['abc_message'] ?? ''));
         $consent = ! empty($_POST['abc_consent']);
 
-        if (! preg_match('/^\d{4}-\d{2}-\d{2}$/', $date) || $full_name === '' || $option === '' || $email === '' || $phone === '' || ! $consent) {
+        if (! preg_match('/^\d{4}-\d{2}-\d{2}$/', $date) || ! preg_match('/^(?:[01]\d|2[0-3]):[0-5]\d$/', $time_slot) || $full_name === '' || $option === '' || $email === '' || $phone === '' || ! $consent) {
             $go($calendar_id, 'error', 'Uzupełnij wszystkie wymagane pola.');
         }
         if (! is_email($email)) {
@@ -62,6 +63,28 @@ trait Rdev_Calendar_Booking_Trait {
             $go($calendar_id, 'error', 'Ten termin nie jest już dostępny.');
         }
 
+        $time_overrides = self::normalize_time_slots_overrides((string) get_post_meta($calendar_id, '_abc_time_slots_overrides', true));
+        $time_reservations = self::normalize_time_slot_reservations((string) get_post_meta($calendar_id, '_abc_time_slots_reservations', true));
+        $day_slots = self::get_date_slots($date, $settings, $time_overrides);
+        if (empty($day_slots)) {
+            $go($calendar_id, 'error', 'Brak dostępnych godzin dla wybranej daty.');
+        }
+        if (! in_array($time_slot, $day_slots, true)) {
+            $go($calendar_id, 'error', 'Wybrana godzina nie jest dostępna dla tej daty.');
+        }
+        $existing_slot = $time_reservations[$date][$time_slot] ?? null;
+        if (is_array($existing_slot)) {
+            $slot_status = (string) ($existing_slot['status'] ?? '');
+            $slot_expires = (int) ($existing_slot['expires_at'] ?? 0);
+            if ($slot_status === 'booked') {
+                $go($calendar_id, 'error', 'Wybrana godzina jest już zajęta.');
+            }
+            if ($slot_status === 'hold' && ($slot_expires <= 0 || $slot_expires > time())) {
+                $go($calendar_id, 'error', 'Wybrana godzina jest chwilowo zarezerwowana.');
+            }
+            unset($time_reservations[$date][$time_slot]);
+        }
+
         $hold_minutes = (int) $settings['booking_hold_minutes'];
         $hold_minutes = max(1, min(10080, $hold_minutes));
         $hold_expires = time() + ($hold_minutes * MINUTE_IN_SECONDS);
@@ -71,7 +94,7 @@ trait Rdev_Calendar_Booking_Trait {
         $request_id = wp_insert_post([
             'post_type' => self::REQUEST_CPT,
             'post_status' => 'publish',
-            'post_title' => wp_strip_all_tags($date . ' — ' . $full_name . ' — ' . $option),
+            'post_title' => wp_strip_all_tags($date . ' ' . $time_slot . ' — ' . $full_name . ' — ' . $option),
             'post_content' => $message,
         ], true);
 
@@ -84,6 +107,7 @@ trait Rdev_Calendar_Booking_Trait {
         update_post_meta($request_id, '_abc_hold_minutes', $hold_minutes);
         update_post_meta($request_id, '_abc_calendar_id', $calendar_id);
         update_post_meta($request_id, '_abc_date', $date);
+        update_post_meta($request_id, '_abc_time', $time_slot);
         update_post_meta($request_id, '_abc_option', $option);
         update_post_meta($request_id, '_abc_full_name', $full_name);
         update_post_meta($request_id, '_abc_email', $email);
@@ -93,19 +117,14 @@ trait Rdev_Calendar_Booking_Trait {
         update_post_meta($request_id, '_abc_expired_email_subject_template', (string) $settings['booking_client_expired_email_subject']);
         update_post_meta($request_id, '_abc_expired_email_body_template', (string) $settings['booking_client_expired_email_body']);
 
-        $hold_note = self::replace_tokens((string) $settings['booking_hold_note_template'], [
-            'hours' => $hold_hours,
-            'minutes' => (string) $hold_minutes,
-            'expires' => $expires_human,
-        ]);
-
-        $status_map[$date] = [
-            'status' => 'tentative',
-            'note' => $hold_note,
-            'hold_expires_at' => $hold_expires,
-            'hold_request_id' => (int) $request_id,
+        $time_reservations[$date][$time_slot] = [
+            'status' => 'hold',
+            'expires_at' => $hold_expires,
+            'request_id' => (int) $request_id,
         ];
+        $status_map = self::apply_slot_aggregate_to_status_map($date, $settings, $time_overrides, $time_reservations, $status_map);
         self::save_status_map($calendar_id, $status_map);
+        update_post_meta($calendar_id, '_abc_time_slots_reservations', wp_json_encode($time_reservations, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES));
 
         $notify = sanitize_email((string) $settings['booking_notification_email']);
         if (! is_email($notify)) {
@@ -117,6 +136,7 @@ trait Rdev_Calendar_Booking_Trait {
             'Nowe zapytanie rezerwacji',
             '------------------------',
             'Data: ' . $date,
+            'Godzina: ' . $time_slot,
             'Usługa / Pakiet: ' . $option,
             'Imię i nazwisko: ' . $full_name,
             'E-mail: ' . $email,
@@ -132,6 +152,7 @@ trait Rdev_Calendar_Booking_Trait {
             $subject = self::replace_tokens((string) $settings['booking_client_initial_email_subject'], [
                 'full_name' => $full_name,
                 'date' => $date,
+                'time' => $time_slot,
                 'option' => $option,
                 'hours' => $hold_hours,
                 'minutes' => (string) $hold_minutes,
@@ -141,6 +162,7 @@ trait Rdev_Calendar_Booking_Trait {
             $body = self::replace_tokens((string) $settings['booking_client_initial_email_body'], [
                 'full_name' => $full_name,
                 'date' => $date,
+                'time' => $time_slot,
                 'option' => $option,
                 'hours' => $hold_hours,
                 'minutes' => (string) $hold_minutes,
@@ -198,17 +220,28 @@ trait Rdev_Calendar_Booking_Trait {
         foreach ($requests as $request_id) {
             $calendar_id = (int) get_post_meta($request_id, '_abc_calendar_id', true);
             $date = sanitize_text_field((string) get_post_meta($request_id, '_abc_date', true));
+            $time_slot = sanitize_text_field((string) get_post_meta($request_id, '_abc_time', true));
             $hold_expires = (int) get_post_meta($request_id, '_abc_hold_expires_at', true);
             $hold_minutes = max(1, (int) get_post_meta($request_id, '_abc_hold_minutes', true));
             $hold_hours = rtrim(rtrim(number_format($hold_minutes / 60, 2, '.', ''), '0'), '.');
 
             if ($calendar_id > 0 && preg_match('/^\d{4}-\d{2}-\d{2}$/', $date)) {
                 $status_map = self::normalize_status_map((string) get_post_meta($calendar_id, '_abc_status_map', true));
-                $entry = $status_map[$date] ?? null;
-                if (is_array($entry) && (int) ($entry['hold_request_id'] ?? 0) === (int) $request_id) {
-                    $status_map[$date] = ['status' => 'available', 'note' => ''];
-                    self::save_status_map($calendar_id, $status_map);
+                $time_overrides = self::normalize_time_slots_overrides((string) get_post_meta($calendar_id, '_abc_time_slots_overrides', true));
+                $time_reservations = self::normalize_time_slot_reservations((string) get_post_meta($calendar_id, '_abc_time_slots_reservations', true));
+
+                if ($time_slot !== '' && isset($time_reservations[$date][$time_slot])) {
+                    $entry = $time_reservations[$date][$time_slot];
+                    if ((int) ($entry['request_id'] ?? 0) === (int) $request_id) {
+                        unset($time_reservations[$date][$time_slot]);
+                        if (empty($time_reservations[$date])) {
+                            unset($time_reservations[$date]);
+                        }
+                        update_post_meta($calendar_id, '_abc_time_slots_reservations', wp_json_encode($time_reservations, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES));
+                    }
                 }
+                $status_map = self::apply_slot_aggregate_to_status_map($date, self::get_calendar_settings($calendar_id), $time_overrides, $time_reservations, $status_map);
+                self::save_status_map($calendar_id, $status_map);
             }
 
             $send = (string) get_post_meta($request_id, '_abc_send_expired_email', true) === '1';
@@ -224,12 +257,13 @@ trait Rdev_Calendar_Booking_Trait {
                     $subject_tpl = 'Wstępna rezerwacja wygasła';
                 }
                 if ($body_tpl === '') {
-                    $body_tpl = "Cześć {full_name},\n\nWstępna rezerwacja terminu wygasła (brak potwierdzenia).\nData: {date}\nUsługa / Pakiet: {option}\nCzas holda: {hours}h ({minutes} min)\nWygasła: {expires}\n\nJeśli termin jest nadal aktualny, wyślij nowe zapytanie.\n\n{site_name}";
+                    $body_tpl = "Cześć {full_name},\n\nWstępna rezerwacja terminu wygasła (brak potwierdzenia).\nData: {date}\nGodzina: {time}\nUsługa / Pakiet: {option}\nCzas holda: {hours}h ({minutes} min)\nWygasła: {expires}\n\nJeśli termin jest nadal aktualny, wyślij nowe zapytanie.\n\n{site_name}";
                 }
 
                 $ctx = [
                     'full_name' => $full_name,
                     'date' => $date,
+                    'time' => $time_slot,
                     'option' => $option,
                     'hours' => $hold_hours,
                     'minutes' => (string) $hold_minutes,

@@ -82,6 +82,7 @@ trait Rdev_Calendar_Admin_Trait {
             'cb' => $columns['cb'] ?? '<input type="checkbox" />',
             'title' => __('Request', 'rdev-calendar'),
             'abc_date' => __('Date', 'rdev-calendar'),
+            'abc_time' => __('Time', 'rdev-calendar'),
             'abc_option' => __('Service / Package', 'rdev-calendar'),
             'abc_contact' => __('Contact', 'rdev-calendar'),
             'abc_status' => __('Status', 'rdev-calendar'),
@@ -154,21 +155,26 @@ trait Rdev_Calendar_Admin_Trait {
 
         $calendar_id = (int) get_post_meta($request_id, '_abc_calendar_id', true);
         $date = sanitize_text_field((string) get_post_meta($request_id, '_abc_date', true));
+        $time_slot = sanitize_text_field((string) get_post_meta($request_id, '_abc_time', true));
         $full_name = sanitize_text_field((string) get_post_meta($request_id, '_abc_full_name', true));
         $option = sanitize_text_field((string) get_post_meta($request_id, '_abc_option', true));
         $email = sanitize_email((string) get_post_meta($request_id, '_abc_email', true));
         $settings = $calendar_id > 0 ? self::get_calendar_settings($calendar_id) : self::defaults();
         $status_map = $calendar_id > 0 ? self::normalize_status_map((string) get_post_meta($calendar_id, '_abc_status_map', true)) : [];
-        $entry = ($calendar_id > 0 && $date !== '') ? ($status_map[$date] ?? null) : null;
+        $time_overrides = $calendar_id > 0 ? self::normalize_time_slots_overrides((string) get_post_meta($calendar_id, '_abc_time_slots_overrides', true)) : [];
+        $time_reservations = $calendar_id > 0 ? self::normalize_time_slot_reservations((string) get_post_meta($calendar_id, '_abc_time_slots_reservations', true)) : [];
 
         if ($decision === 'approve') {
             update_post_meta($request_id, '_abc_status', 'approved');
 
-            if ($calendar_id > 0 && preg_match('/^\d{4}-\d{2}-\d{2}$/', $date) && is_array($entry) && (int) ($entry['hold_request_id'] ?? 0) === $request_id) {
-                $status_map[$date] = [
+            if ($calendar_id > 0 && preg_match('/^\d{4}-\d{2}-\d{2}$/', $date) && preg_match('/^(?:[01]\d|2[0-3]):[0-5]\d$/', $time_slot)) {
+                $time_reservations[$date][$time_slot] = [
                     'status' => 'booked',
-                    'note' => '',
+                    'expires_at' => 0,
+                    'request_id' => $request_id,
                 ];
+                update_post_meta($calendar_id, '_abc_time_slots_reservations', wp_json_encode($time_reservations, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES));
+                $status_map = self::apply_slot_aggregate_to_status_map($date, $settings, $time_overrides, $time_reservations, $status_map);
                 self::save_status_map($calendar_id, $status_map);
             }
 
@@ -176,6 +182,7 @@ trait Rdev_Calendar_Admin_Trait {
                 $ctx = [
                     'full_name' => $full_name,
                     'date' => $date,
+                    'time' => $time_slot,
                     'option' => $option,
                     'status' => 'Zatwierdzona',
                     'site_name' => get_bloginfo('name'),
@@ -187,8 +194,15 @@ trait Rdev_Calendar_Admin_Trait {
         } else {
             update_post_meta($request_id, '_abc_status', 'rejected');
 
-            if ($calendar_id > 0 && preg_match('/^\d{4}-\d{2}-\d{2}$/', $date) && is_array($entry) && (int) ($entry['hold_request_id'] ?? 0) === $request_id) {
-                $status_map[$date] = ['status' => 'available', 'note' => ''];
+            if ($calendar_id > 0 && preg_match('/^\d{4}-\d{2}-\d{2}$/', $date) && preg_match('/^(?:[01]\d|2[0-3]):[0-5]\d$/', $time_slot)) {
+                if (isset($time_reservations[$date][$time_slot]) && (int) ($time_reservations[$date][$time_slot]['request_id'] ?? 0) === $request_id) {
+                    unset($time_reservations[$date][$time_slot]);
+                    if (empty($time_reservations[$date])) {
+                        unset($time_reservations[$date]);
+                    }
+                    update_post_meta($calendar_id, '_abc_time_slots_reservations', wp_json_encode($time_reservations, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES));
+                }
+                $status_map = self::apply_slot_aggregate_to_status_map($date, $settings, $time_overrides, $time_reservations, $status_map);
                 self::save_status_map($calendar_id, $status_map);
             }
 
@@ -196,6 +210,7 @@ trait Rdev_Calendar_Admin_Trait {
                 $ctx = [
                     'full_name' => $full_name,
                     'date' => $date,
+                    'time' => $time_slot,
                     'option' => $option,
                     'status' => 'Odrzucona',
                     'site_name' => get_bloginfo('name'),
@@ -256,6 +271,10 @@ trait Rdev_Calendar_Admin_Trait {
         }
         if ($column === 'abc_option') {
             echo esc_html((string) get_post_meta($post_id, '_abc_option', true));
+            return;
+        }
+        if ($column === 'abc_time') {
+            echo esc_html((string) get_post_meta($post_id, '_abc_time', true));
             return;
         }
         if ($column === 'abc_contact') {

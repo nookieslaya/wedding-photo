@@ -3,7 +3,7 @@ Contributors: rdev
 Requires at least: 6.0
 Tested up to: 6.8
 Requires PHP: 7.1
-Stable tag: 2.0.5
+Stable tag: 2.2.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -88,6 +88,25 @@ Yes. Set it per calendar in minutes in calendar settings.
 Yes. Most form labels, notices, and email templates are editable in calendar settings.
 
 == Changelog ==
+
+= 2.2.0 =
+
+* Added hybrid date/time availability:
+  * global default hours
+  * per-date hour overrides
+* Added admin controls to add/remove hours for selected dates.
+* Added frontend hour selector that shows only available hours for selected date.
+* Added slot-level reservation handling (hold/booked) and server-side validation.
+
+= 2.1.0 =
+
+* Added hybrid time-slot booking model:
+  * default hours for all dates
+  * per-date hour overrides
+* Added admin tools to add/remove hours for selected dates.
+* Added frontend time selection based on selected date and real slot availability.
+* Added slot-level hold/booked reservations and validation on submit.
+* Added booking time column in booking requests list.
 
 = 2.0.5 =
 

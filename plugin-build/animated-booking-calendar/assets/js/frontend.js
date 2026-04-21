@@ -36,16 +36,72 @@
     return out;
   };
 
+  const normalizeSlots = (raw) => {
+    if (!Array.isArray(raw)) return [];
+    return [...new Set(raw
+      .map((v) => (typeof v === 'string' ? v.trim() : ''))
+      .filter((v) => /^(?:[01]\d|2[0-3]):[0-5]\d$/.test(v)))].sort();
+  };
+
+  const normalizeOverrides = (raw) => {
+    if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return {};
+    const out = {};
+    Object.entries(raw).forEach(([date, slots]) => {
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) return;
+      out[date] = normalizeSlots(slots);
+    });
+    return out;
+  };
+
+  const normalizeReservations = (raw) => {
+    if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return {};
+    const now = Math.floor(Date.now() / 1000);
+    const out = {};
+    Object.entries(raw).forEach(([date, slots]) => {
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) return;
+      if (!slots || typeof slots !== 'object' || Array.isArray(slots)) return;
+      Object.entries(slots).forEach(([time, entry]) => {
+        if (!/^(?:[01]\d|2[0-3]):[0-5]\d$/.test(time)) return;
+        if (!entry || typeof entry !== 'object' || Array.isArray(entry)) return;
+        const status = String(entry.status || '');
+        if (!['hold', 'booked'].includes(status)) return;
+        const expiresAt = Number(entry.expires_at || 0);
+        if (status === 'hold' && expiresAt > 0 && expiresAt <= now) return;
+        if (!out[date]) out[date] = {};
+        out[date][time] = { status, expires_at: expiresAt };
+      });
+    });
+    return out;
+  };
+
   const run = (calendar) => {
     const id = (calendar.dataset.abcCalendarId || '').trim();
     const monthsRaw = Number(calendar.dataset.abcMonths || 12);
     const offsetRaw = Number(calendar.dataset.abcOffset || 0);
 
     let statusMap = {};
+    let defaultSlots = [];
+    let timeOverrides = {};
+    let timeReservations = {};
     try {
       statusMap = normalizeMap(JSON.parse(calendar.dataset.abcStatusMap || '{}'));
     } catch (_e) {
       statusMap = {};
+    }
+    try {
+      defaultSlots = normalizeSlots(JSON.parse(calendar.dataset.abcTimeDefault || '[]'));
+    } catch (_e) {
+      defaultSlots = [];
+    }
+    try {
+      timeOverrides = normalizeOverrides(JSON.parse(calendar.dataset.abcTimeOverrides || '{}'));
+    } catch (_e) {
+      timeOverrides = {};
+    }
+    try {
+      timeReservations = normalizeReservations(JSON.parse(calendar.dataset.abcTimeReservations || '{}'));
+    } catch (_e) {
+      timeReservations = {};
     }
 
     const monthLabel = calendar.querySelector('[data-abc-month-label]');
@@ -60,6 +116,7 @@
     const form = calendar.querySelector('[data-abc-form]');
     const dateInput = calendar.querySelector('[data-abc-date]');
     const dateDisplay = calendar.querySelector('[data-abc-date-display]');
+    const timeSelect = calendar.querySelector('[data-abc-time-select]');
 
     if (!monthLabel || !weekdays || !daysGrid || !note || !prev || !next) return;
 
@@ -99,11 +156,24 @@
       if (form) form.hidden = true;
       if (dateInput) dateInput.value = '';
       if (dateDisplay) dateDisplay.value = '';
+      if (timeSelect) {
+        timeSelect.innerHTML = '<option value="">Wybierz godzinę</option>';
+        timeSelect.value = '';
+      }
+    };
+
+    const getAvailableSlots = (dayKey) => {
+      const configured = (timeOverrides[dayKey] && timeOverrides[dayKey].length > 0)
+        ? timeOverrides[dayKey]
+        : defaultSlots;
+      const reserved = timeReservations[dayKey] || {};
+      return configured.filter((slot) => !reserved[slot]);
     };
 
     const setBooking = (dayKey, dayData) => {
-      if (!bookingPanel || !dateInput || !dateDisplay || !openButton || !form) return;
-      if (!dayData || dayData.status !== 'available') {
+      if (!bookingPanel || !dateInput || !dateDisplay || !openButton || !form || !timeSelect) return;
+      const daySlots = getAvailableSlots(dayKey);
+      if (!dayData || dayData.status !== 'available' || daySlots.length === 0) {
         hideBooking();
         return;
       }
@@ -113,6 +183,9 @@
       form.hidden = true;
       dateInput.value = dayKey;
       dateDisplay.value = dateFormatter.format(d);
+      timeSelect.innerHTML = ['<option value="">Wybierz godzinę</option>']
+        .concat(daySlots.map((slot) => `<option value="${slot}">${slot}</option>`))
+        .join('');
     };
 
     openButton?.addEventListener('click', () => {
@@ -174,10 +247,12 @@
       const data = statusMap[day] || { status: 'none', note: '' };
       const d = day ? new Date(day + 'T00:00:00') : null;
       const dateText = d ? dateFormatter.format(d) : '';
+      const daySlots = day ? getAvailableSlots(day) : [];
+      const slotsText = daySlots.length > 0 ? ` · Godziny: ${daySlots.join(', ')}` : '';
 
       note.textContent = data.note
-        ? `${dateText}: ${(STATUS_LABEL[data.status] || STATUS_LABEL.none)} · ${data.note}`
-        : `${dateText}: ${(STATUS_LABEL[data.status] || STATUS_LABEL.none)}`;
+        ? `${dateText}: ${(STATUS_LABEL[data.status] || STATUS_LABEL.none)} · ${data.note}${slotsText}`
+        : `${dateText}: ${(STATUS_LABEL[data.status] || STATUS_LABEL.none)}${slotsText}`;
 
       setBooking(day, data);
     });
