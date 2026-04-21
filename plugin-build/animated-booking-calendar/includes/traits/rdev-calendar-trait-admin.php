@@ -189,7 +189,7 @@ trait Rdev_Calendar_Admin_Trait {
                 ];
                 $subject = self::replace_tokens((string) $settings['booking_client_approved_email_subject'], $ctx);
                 $body = self::replace_tokens((string) $settings['booking_client_approved_email_body'], $ctx);
-                wp_mail($email, $subject, $body);
+                wp_mail($email, $subject, $body, self::mail_headers($settings));
             }
         } else {
             update_post_meta($request_id, '_abc_status', 'rejected');
@@ -217,7 +217,7 @@ trait Rdev_Calendar_Admin_Trait {
                 ];
                 $subject = self::replace_tokens((string) $settings['booking_client_rejected_email_subject'], $ctx);
                 $body = self::replace_tokens((string) $settings['booking_client_rejected_email_body'], $ctx);
-                wp_mail($email, $subject, $body);
+                wp_mail($email, $subject, $body, self::mail_headers($settings));
             }
         }
 

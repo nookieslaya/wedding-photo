@@ -4,3 +4,5 @@
 !/public/.gitkeep
 .env
 npm-debug.log
+plugin-build/
+plugin-export/

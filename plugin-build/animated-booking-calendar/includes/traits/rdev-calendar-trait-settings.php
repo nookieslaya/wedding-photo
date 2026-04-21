@@ -21,6 +21,8 @@ trait Rdev_Calendar_Settings_Trait {
             'cta_url' => '',
             'status_map' => '{}',
             'booking_notification_email' => '',
+            'booking_from_email' => '',
+            'booking_from_name' => '',
             'booking_hold_minutes' => 2880,
             'booking_default_time_slots' => "10:00\n12:00\n14:00\n16:00",
             'booking_hold_notice_text' => 'Rezerwacja terminu jest wstępna i trwa {hours}h ({minutes} min). Po tym czasie termin wraca do puli wolnych, jeśli nie zostanie potwierdzony.',
@@ -61,6 +63,8 @@ trait Rdev_Calendar_Settings_Trait {
             'cta_url' => '_abc_cta_url',
             'status_map' => '_abc_status_map',
             'booking_notification_email' => '_abc_booking_notification_email',
+            'booking_from_email' => '_abc_booking_from_email',
+            'booking_from_name' => '_abc_booking_from_name',
             'booking_hold_minutes' => '_abc_booking_hold_minutes',
             'booking_default_time_slots' => '_abc_booking_default_time_slots',
             'booking_hold_notice_text' => '_abc_booking_hold_notice_text',
@@ -175,6 +179,8 @@ trait Rdev_Calendar_Settings_Trait {
             <tr><th><label for="abc_cta_label">CTA label</label></th><td><input class="regular-text" id="abc_cta_label" name="abc_settings[cta_label]" value="<?php echo $text($s['cta_label']); ?>"></td></tr>
             <tr><th><label for="abc_cta_url">CTA URL</label></th><td><input class="regular-text" id="abc_cta_url" name="abc_settings[cta_url]" value="<?php echo $text($s['cta_url']); ?>"></td></tr>
             <tr><th><label for="abc_booking_notification_email">Notification email</label></th><td><input type="email" class="regular-text" id="abc_booking_notification_email" name="abc_settings[booking_notification_email]" value="<?php echo $text($s['booking_notification_email']); ?>"></td></tr>
+            <tr><th><label for="abc_booking_from_email">From email</label></th><td><input type="email" class="regular-text" id="abc_booking_from_email" name="abc_settings[booking_from_email]" value="<?php echo $text($s['booking_from_email']); ?>"></td></tr>
+            <tr><th><label for="abc_booking_from_name">From name</label></th><td><input class="regular-text" id="abc_booking_from_name" name="abc_settings[booking_from_name]" value="<?php echo $text($s['booking_from_name']); ?>"></td></tr>
             <tr><th><label for="abc_booking_hold_minutes">Hold duration (minutes)</label></th><td><input type="number" min="1" max="10080" id="abc_booking_hold_minutes" name="abc_settings[booking_hold_minutes]" value="<?php echo (int) $s['booking_hold_minutes']; ?>"></td></tr>
             <tr><th><label for="abc_booking_default_time_slots">Default available hours</label></th><td><textarea class="large-text" rows="5" id="abc_booking_default_time_slots" name="abc_settings[booking_default_time_slots]"><?php echo $textarea($s['booking_default_time_slots']); ?></textarea><p class="description">One time per line in HH:MM format, e.g. 10:00</p></td></tr>
             <tr><th><label for="abc_booking_hold_notice_text">Hold notice text</label></th><td><textarea class="large-text" rows="2" id="abc_booking_hold_notice_text" name="abc_settings[booking_hold_notice_text]"><?php echo $textarea($s['booking_hold_notice_text']); ?></textarea><p class="description">Placeholders: {hours}, {minutes}</p></td></tr>
@@ -250,6 +256,8 @@ trait Rdev_Calendar_Settings_Trait {
             'cta_label' => sanitize_text_field((string) ($incoming['cta_label'] ?? $defaults['cta_label'])),
             'cta_url' => esc_url_raw((string) ($incoming['cta_url'] ?? $defaults['cta_url'])),
             'booking_notification_email' => sanitize_email((string) ($incoming['booking_notification_email'] ?? '')),
+            'booking_from_email' => sanitize_email((string) ($incoming['booking_from_email'] ?? '')),
+            'booking_from_name' => sanitize_text_field((string) ($incoming['booking_from_name'] ?? '')),
             'booking_hold_minutes' => max(1, min(10080, (int) ($incoming['booking_hold_minutes'] ?? $defaults['booking_hold_minutes']))),
             'booking_default_time_slots' => sanitize_textarea_field((string) ($incoming['booking_default_time_slots'] ?? $defaults['booking_default_time_slots'])),
             'booking_hold_notice_text' => sanitize_textarea_field((string) ($incoming['booking_hold_notice_text'] ?? $defaults['booking_hold_notice_text'])),
@@ -300,6 +308,18 @@ trait Rdev_Calendar_Settings_Trait {
             }
         }
         return array_values(array_unique($result));
+    }
+
+    private static function mail_headers(array $settings): array {
+        $from_email = sanitize_email((string) ($settings['booking_from_email'] ?? ''));
+        $from_name = sanitize_text_field((string) ($settings['booking_from_name'] ?? ''));
+        if (! is_email($from_email)) {
+            return [];
+        }
+        if ($from_name !== '') {
+            return ['From: ' . $from_name . ' <' . $from_email . '>'];
+        }
+        return ['From: ' . $from_email];
     }
 
     private static function parse_time_slots(string $raw): array {

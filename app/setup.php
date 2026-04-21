@@ -770,6 +770,24 @@ function animated_booking_replace_tokens(string $template, array $context): stri
 }
 
 /**
+ * Build optional wp_mail headers from module sender settings.
+ */
+function animated_booking_mail_headers(array $module): array
+{
+    $fromEmail = sanitize_email((string) ($module['booking_from_email'] ?? ''));
+    $fromName = sanitize_text_field((string) ($module['booking_from_name'] ?? ''));
+    if (! is_email($fromEmail)) {
+        return [];
+    }
+
+    if ($fromName !== '') {
+        return ['From: '.$fromName.' <'.$fromEmail.'>'];
+    }
+
+    return ['From: '.$fromEmail];
+}
+
+/**
  * Resolve day status for date key from module map + ranges.
  */
 function animated_resolve_module_day_status(array $module, string $dateKey): array
@@ -976,7 +994,7 @@ function animated_cleanup_expired_booking_holds(int $limit = 100): void
 
             $subject = animated_booking_replace_tokens($subjectTemplate, $tokenContext);
             $body = animated_booking_replace_tokens($bodyTemplate, $tokenContext);
-            wp_mail($clientEmail, $subject, $body);
+            wp_mail($clientEmail, $subject, $body, animated_booking_mail_headers($module));
         }
 
         update_post_meta($requestId, '_abr_status', 'expired');
@@ -1194,7 +1212,8 @@ function animated_handle_booking_request_submit(): void
         'ID zgłoszenia: '.$requestId,
     ]);
 
-    wp_mail($notifyEmail, $adminSubject, $adminBody);
+    $mailHeaders = animated_booking_mail_headers($module);
+    wp_mail($notifyEmail, $adminSubject, $adminBody, $mailHeaders);
 
     $sendInitialEmailRaw = $module['booking_send_initial_email'] ?? 1;
     $sendInitialEmail = ! in_array($sendInitialEmailRaw, [0, '0', false, 'false'], true);
@@ -1219,7 +1238,7 @@ function animated_handle_booking_request_submit(): void
         ];
         $clientSubject = animated_booking_replace_tokens($clientSubjectTemplate, $clientTokenContext);
         $clientBody = animated_booking_replace_tokens($clientBodyTemplate, $clientTokenContext);
-        wp_mail($email, $clientSubject, $clientBody);
+        wp_mail($email, $clientSubject, $clientBody, $mailHeaders);
     }
 
     $successMessage = trim((string) ($module['booking_success_message'] ?? ''));
@@ -1332,7 +1351,7 @@ function animated_handle_booking_request_decision(): void
                 'status' => 'Zatwierdzona',
                 'site_name' => get_bloginfo('name'),
             ];
-            wp_mail($email, animated_booking_replace_tokens($subjectTpl, $ctx), animated_booking_replace_tokens($bodyTpl, $ctx));
+            wp_mail($email, animated_booking_replace_tokens($subjectTpl, $ctx), animated_booking_replace_tokens($bodyTpl, $ctx), animated_booking_mail_headers($module));
         }
     } else {
         $sendRaw = $module['booking_send_rejected_email'] ?? 1;
@@ -1354,7 +1373,7 @@ function animated_handle_booking_request_decision(): void
                 'status' => 'Odrzucona',
                 'site_name' => get_bloginfo('name'),
             ];
-            wp_mail($email, animated_booking_replace_tokens($subjectTpl, $ctx), animated_booking_replace_tokens($bodyTpl, $ctx));
+            wp_mail($email, animated_booking_replace_tokens($subjectTpl, $ctx), animated_booking_replace_tokens($bodyTpl, $ctx), animated_booking_mail_headers($module));
         }
     }
 

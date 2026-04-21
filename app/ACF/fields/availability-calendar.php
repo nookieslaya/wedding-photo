@@ -89,6 +89,16 @@ $availabilityCalendar
         'instructions' => 'Optional. If empty, admin email will be used.',
     ])
         ->setWidth(50)
+    ->addEmail('booking_from_email', [
+        'label' => 'Booking "From" email',
+        'instructions' => 'Optional sender email for booking messages.',
+    ])
+        ->setWidth(25)
+    ->addText('booking_from_name', [
+        'label' => 'Booking "From" name',
+        'instructions' => 'Optional sender name for booking messages.',
+    ])
+        ->setWidth(25)
     ->addNumber('booking_hold_minutes', [
         'label' => 'Booking hold duration (minutes)',
         'instructions' => 'How long tentative reservation should be held before auto-release.',

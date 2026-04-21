@@ -146,7 +146,8 @@ trait Rdev_Calendar_Booking_Trait {
             'Wiadomość:',
             $message !== '' ? $message : '-',
         ]);
-        wp_mail($notify, $admin_subject, $admin_body);
+        $mail_headers = self::mail_headers($settings);
+        wp_mail($notify, $admin_subject, $admin_body, $mail_headers);
 
         if (self::to_bool($settings['booking_send_initial_email']) && is_email($email)) {
             $subject = self::replace_tokens((string) $settings['booking_client_initial_email_subject'], [
@@ -169,7 +170,7 @@ trait Rdev_Calendar_Booking_Trait {
                 'expires' => $expires_human,
                 'site_name' => get_bloginfo('name'),
             ]);
-            wp_mail($email, $subject, $body);
+            wp_mail($email, $subject, $body, $mail_headers);
         }
 
         $msg = self::replace_tokens((string) $settings['booking_success_message'], [
@@ -270,7 +271,8 @@ trait Rdev_Calendar_Booking_Trait {
                     'expires' => $expires_human,
                     'site_name' => get_bloginfo('name'),
                 ];
-                wp_mail($email, self::replace_tokens($subject_tpl, $ctx), self::replace_tokens($body_tpl, $ctx));
+                $calendar_settings = $calendar_id > 0 ? self::get_calendar_settings($calendar_id) : self::defaults();
+                wp_mail($email, self::replace_tokens($subject_tpl, $ctx), self::replace_tokens($body_tpl, $ctx), self::mail_headers($calendar_settings));
             }
 
             update_post_meta($request_id, '_abc_status', 'expired');
