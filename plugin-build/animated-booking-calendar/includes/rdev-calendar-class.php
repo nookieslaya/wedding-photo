@@ -19,6 +19,13 @@ final class Rdev_Calendar_Plugin {
         return dirname(__DIR__) . '/rdev-calendar.php';
     }
 
+    private static function asset_version(string $relative_path): string {
+        $base_file = self::plugin_base_file();
+        $path = plugin_dir_path($base_file) . ltrim($relative_path, '/');
+        $mtime = file_exists($path) ? (int) filemtime($path) : 0;
+        return self::VERSION . ($mtime > 0 ? '.' . $mtime : '');
+    }
+
     public static function boot(): void {
         static $booted = false;
         if ($booted) {

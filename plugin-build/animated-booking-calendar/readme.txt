@@ -32,6 +32,30 @@ Main capabilities:
   * font presets
 * No ACF Pro required
 
+## Booking status state machine
+
+Request statuses:
+
+* `hold`
+* `approved`
+* `rejected`
+* `released`
+* `expired`
+
+Allowed transitions:
+
+* `hold -> approved`
+* `hold -> rejected`
+* `hold -> expired`
+* `approved -> released`
+* `rejected -> approved`
+* `expired -> approved`
+* `released -> approved`
+
+Reference:
+
+* See `STATE_MACHINE.md` in plugin root for full details.
+
 == Installation ==
 
 1. Upload the `rdev-calendar` plugin folder to `/wp-content/plugins/`.

@@ -310,7 +310,7 @@
       const dateText = d ? dateFormatter.format(d) : '';
       const daySlots = day ? getAvailableSlots(day) : [];
       const dayMode = day ? resolveDayMode(day) : 'slots';
-      const showSlots = data.status !== 'none';
+      const showSlots = ['available', 'tentative', 'free', 'hold'].includes(String(data.status || ''));
       const slotsText = showSlots
         ? (dayMode === 'all_day'
             ? ` · ${t('all_day', 'Full day')}`

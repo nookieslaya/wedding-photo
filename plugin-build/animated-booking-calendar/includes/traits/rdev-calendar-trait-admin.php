@@ -87,10 +87,8 @@ trait Rdev_Calendar_Admin_Trait {
 
         $base_file = self::plugin_base_file();
         $base = plugin_dir_url($base_file) . 'assets/';
-        $admin_css_path = plugin_dir_path($base_file) . 'assets/css/admin.css';
-        $admin_js_path = plugin_dir_path($base_file) . 'assets/js/admin.js';
-        $admin_css_ver = file_exists($admin_css_path) ? (string) filemtime($admin_css_path) : self::VERSION;
-        $admin_js_ver = file_exists($admin_js_path) ? (string) filemtime($admin_js_path) : self::VERSION;
+        $admin_css_ver = self::asset_version('assets/css/admin.css');
+        $admin_js_ver = self::asset_version('assets/js/admin.js');
         wp_enqueue_style('abc-admin', $base . 'css/admin.css', [], $admin_css_ver);
         wp_enqueue_script('abc-admin', $base . 'js/admin.js', [], $admin_js_ver, true);
         $is_pl = self::is_polish_locale();
@@ -149,13 +147,13 @@ trait Rdev_Calendar_Admin_Trait {
         }
 
         $status = (string) get_post_meta($post->ID, '_abc_status', true);
-        if (! in_array($status, ['hold', 'approved', 'rejected', 'expired'], true)) {
+        if (! in_array($status, ['hold', 'approved', 'rejected', 'expired', 'released'], true)) {
             $status = 'hold';
         }
 
         $base = admin_url('admin-post.php');
 
-        if ($status !== 'approved') {
+        if (in_array($status, ['hold', 'rejected', 'expired', 'released'], true)) {
             $approve_url = wp_nonce_url(add_query_arg([
                 'action' => 'abc_request_decision',
                 'request_id' => $post->ID,
@@ -164,7 +162,7 @@ trait Rdev_Calendar_Admin_Trait {
             $actions['abc_approve'] = '<a href="' . esc_url($approve_url) . '">' . esc_html(self::tr('Approve', 'Zatwierdź')) . '</a>';
         }
 
-        if ($status !== 'rejected') {
+        if (in_array($status, ['hold', 'approved'], true)) {
             $reject_url = wp_nonce_url(add_query_arg([
                 'action' => 'abc_request_decision',
                 'request_id' => $post->ID,
@@ -204,6 +202,9 @@ trait Rdev_Calendar_Admin_Trait {
 
         $calendar_id = (int) get_post_meta($request_id, '_abc_calendar_id', true);
         $previous_status = (string) get_post_meta($request_id, '_abc_status', true);
+        if (! in_array($previous_status, ['hold', 'approved', 'rejected', 'expired', 'released'], true)) {
+            $previous_status = 'hold';
+        }
         $date = sanitize_text_field((string) get_post_meta($request_id, '_abc_date', true));
         $time_slot = sanitize_text_field((string) get_post_meta($request_id, '_abc_time', true));
         $full_name = sanitize_text_field((string) get_post_meta($request_id, '_abc_full_name', true));
@@ -215,18 +216,49 @@ trait Rdev_Calendar_Admin_Trait {
         $time_reservations = $calendar_id > 0 ? self::normalize_time_slot_reservations((string) get_post_meta($calendar_id, '_abc_time_slots_reservations', true)) : [];
 
         if ($decision === 'approve') {
-            update_post_meta($request_id, '_abc_status', 'approved');
+            if (! in_array($previous_status, ['hold', 'rejected', 'expired', 'released'], true)) {
+                $decision_key = 'invalid_transition';
+                $back = wp_get_referer();
+                if (! is_string($back) || $back === '') {
+                    $back = admin_url('edit.php?post_type=' . self::REQUEST_CPT);
+                }
+                wp_safe_redirect(add_query_arg('abc_decision', $decision_key, $back));
+                exit;
+            }
 
             if ($calendar_id > 0 && preg_match('/^\d{4}-\d{2}-\d{2}$/', $date) && (preg_match('/^(?:[01]\d|2[0-3]):[0-5]\d$/', $time_slot) || $time_slot === 'ALL_DAY')) {
+                $existing = $time_reservations[$date][$time_slot] ?? null;
+                if (is_array($existing)) {
+                    $existing_status = (string) ($existing['status'] ?? '');
+                    $existing_request = (int) ($existing['request_id'] ?? 0);
+                    $existing_expires = (int) ($existing['expires_at'] ?? 0);
+                    $active_hold = $existing_status === 'hold' && ($existing_expires <= 0 || $existing_expires > time());
+                    if ($existing_request !== $request_id && ($existing_status === 'booked' || $active_hold)) {
+                        $decision_key = 'approve_conflict';
+                        $back = wp_get_referer();
+                        if (! is_string($back) || $back === '') {
+                            $back = admin_url('edit.php?post_type=' . self::REQUEST_CPT);
+                        }
+                        wp_safe_redirect(add_query_arg('abc_decision', $decision_key, $back));
+                        exit;
+                    }
+                }
                 $time_reservations[$date][$time_slot] = [
                     'status' => 'booked',
                     'expires_at' => 0,
                     'request_id' => $request_id,
                 ];
-                update_post_meta($calendar_id, '_abc_time_slots_reservations', wp_json_encode($time_reservations, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES));
-                $status_map = self::apply_slot_aggregate_to_status_map($date, $settings, $time_overrides, $time_reservations, $status_map);
+                $reconciled = self::reconcile_calendar_state($settings, $time_overrides, $time_reservations, $status_map);
+                $time_reservations = $reconciled['time_reservations'];
+                $status_map = $reconciled['status_map'];
+                self::save_time_reservations($calendar_id, $time_reservations);
                 self::save_status_map($calendar_id, $status_map);
+                if (! empty($reconciled['changed'])) {
+                    self::queue_reconcile_notice($calendar_id);
+                }
             }
+            update_post_meta($request_id, '_abc_status', 'approved');
+            update_post_meta($request_id, '_abc_hold_expires_at', 0);
 
             if (self::to_bool($settings['booking_send_approved_email']) && is_email($email)) {
                 $ctx = [
@@ -242,7 +274,18 @@ trait Rdev_Calendar_Admin_Trait {
                 wp_mail($email, $subject, $body, self::mail_headers($settings));
             }
         } else {
-            update_post_meta($request_id, '_abc_status', 'rejected');
+            if (! in_array($previous_status, ['hold', 'approved'], true)) {
+                $decision_key = 'invalid_transition';
+                $back = wp_get_referer();
+                if (! is_string($back) || $back === '') {
+                    $back = admin_url('edit.php?post_type=' . self::REQUEST_CPT);
+                }
+                wp_safe_redirect(add_query_arg('abc_decision', $decision_key, $back));
+                exit;
+            }
+            $next_status = $previous_status === 'approved' ? 'released' : 'rejected';
+            update_post_meta($request_id, '_abc_status', $next_status);
+            update_post_meta($request_id, '_abc_hold_expires_at', 0);
 
             if ($calendar_id > 0 && preg_match('/^\d{4}-\d{2}-\d{2}$/', $date) && (preg_match('/^(?:[01]\d|2[0-3]):[0-5]\d$/', $time_slot) || $time_slot === 'ALL_DAY')) {
                 if (isset($time_reservations[$date][$time_slot]) && (int) ($time_reservations[$date][$time_slot]['request_id'] ?? 0) === $request_id) {
@@ -250,10 +293,16 @@ trait Rdev_Calendar_Admin_Trait {
                     if (empty($time_reservations[$date])) {
                         unset($time_reservations[$date]);
                     }
-                    update_post_meta($calendar_id, '_abc_time_slots_reservations', wp_json_encode($time_reservations, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES));
+                    self::save_time_reservations($calendar_id, $time_reservations);
                 }
-                $status_map = self::apply_slot_aggregate_to_status_map($date, $settings, $time_overrides, $time_reservations, $status_map);
+                $reconciled = self::reconcile_calendar_state($settings, $time_overrides, $time_reservations, $status_map);
+                $time_reservations = $reconciled['time_reservations'];
+                $status_map = $reconciled['status_map'];
+                self::save_time_reservations($calendar_id, $time_reservations);
                 self::save_status_map($calendar_id, $status_map);
+                if (! empty($reconciled['changed'])) {
+                    self::queue_reconcile_notice($calendar_id);
+                }
             }
 
             if (self::to_bool($settings['booking_send_rejected_email']) && is_email($email)) {
@@ -262,7 +311,7 @@ trait Rdev_Calendar_Admin_Trait {
                     'date' => $date,
                     'time' => $time_slot === 'ALL_DAY' ? self::tr('Full day', 'Cały dzień') : $time_slot,
                     'option' => $option,
-                    'status' => self::tr('Rejected', 'Odrzucona'),
+                    'status' => $next_status === 'released' ? self::tr('Released', 'Zwolniona') : self::tr('Rejected', 'Odrzucona'),
                     'site_name' => get_bloginfo('name'),
                 ];
                 $subject = self::replace_tokens((string) $settings['booking_client_rejected_email_subject'], $ctx);
@@ -286,6 +335,12 @@ trait Rdev_Calendar_Admin_Trait {
     public static function maybe_render_admin_notice(): void {
         if (! is_admin()) {
             return;
+        }
+        $reconcile_notice = self::consume_reconcile_notice();
+        if (is_array($reconcile_notice)) {
+            $calendar_id = isset($reconcile_notice['calendar_id']) ? (int) $reconcile_notice['calendar_id'] : 0;
+            $label = $calendar_id > 0 ? ' #' . $calendar_id : '';
+            echo '<div class="notice notice-info is-dismissible"><p>' . esc_html(self::tr('Calendar data were auto-repaired to keep statuses consistent', 'Dane kalendarza zostały automatycznie naprawione dla zachowania spójności statusów') . $label . '.') . '</p></div>';
         }
         $screen = function_exists('get_current_screen') ? get_current_screen() : null;
         if (! $screen) {
@@ -318,6 +373,14 @@ trait Rdev_Calendar_Admin_Trait {
         }
         if ($decision === 'released') {
             echo '<div class="notice notice-success is-dismissible"><p>' . esc_html(self::tr('Booking released. Date is available again.', 'Termin został zwolniony. Data jest ponownie dostępna.')) . '</p></div>';
+            return;
+        }
+        if ($decision === 'approve_conflict') {
+            echo '<div class="notice notice-error is-dismissible"><p>' . esc_html(self::tr('Cannot approve: this slot is already reserved by another request.', 'Nie można zatwierdzić: ten termin jest już zajęty przez inne zgłoszenie.')) . '</p></div>';
+            return;
+        }
+        if ($decision === 'invalid_transition') {
+            echo '<div class="notice notice-warning is-dismissible"><p>' . esc_html(self::tr('Invalid status transition for this request.', 'Nieprawidłowe przejście statusu dla tego zgłoszenia.')) . '</p></div>';
         }
     }
 
@@ -355,6 +418,8 @@ trait Rdev_Calendar_Admin_Trait {
                 $label = self::tr('Rejected', 'Odrzucone');
             } elseif ($status === 'expired') {
                 $label = self::tr('Expired', 'Wygasło');
+            } elseif ($status === 'released') {
+                $label = self::tr('Released', 'Zwolnione');
             } else {
                 $label = $status !== '' ? $status : '—';
             }

@@ -14,10 +14,8 @@ trait Rdev_Calendar_Frontend_Trait {
     public static function register_front_assets(): void {
         $base_file = self::plugin_base_file();
         $base = plugin_dir_url($base_file) . 'assets/';
-        $front_css_path = plugin_dir_path($base_file) . 'assets/css/frontend.css';
-        $front_js_path = plugin_dir_path($base_file) . 'assets/js/frontend.js';
-        $front_css_ver = file_exists($front_css_path) ? (string) filemtime($front_css_path) : self::VERSION;
-        $front_js_ver = file_exists($front_js_path) ? (string) filemtime($front_js_path) : self::VERSION;
+        $front_css_ver = self::asset_version('assets/css/frontend.css');
+        $front_js_ver = self::asset_version('assets/js/frontend.js');
         wp_register_style('abc-frontend', $base . 'css/frontend.css', [], $front_css_ver);
         wp_register_script('abc-frontend', $base . 'js/frontend.js', [], $front_js_ver, true);
         $is_pl = self::is_polish_locale();

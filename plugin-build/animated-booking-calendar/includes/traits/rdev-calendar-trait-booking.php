@@ -171,9 +171,11 @@ trait Rdev_Calendar_Booking_Trait {
             'expires_at' => $hold_expires,
             'request_id' => (int) $request_id,
         ];
-        $status_map = self::apply_slot_aggregate_to_status_map($date, $settings, $time_overrides, $time_reservations, $status_map);
+        $reconciled = self::reconcile_calendar_state($settings, $time_overrides, $time_reservations, $status_map);
+        $time_reservations = $reconciled['time_reservations'];
+        $status_map = $reconciled['status_map'];
         self::save_status_map($calendar_id, $status_map);
-        update_post_meta($calendar_id, '_abc_time_slots_reservations', wp_json_encode($time_reservations, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES));
+        self::save_time_reservations($calendar_id, $time_reservations);
 
         $notify = sanitize_email((string) $settings['booking_notification_email']);
         if (! is_email($notify)) {
@@ -287,11 +289,13 @@ trait Rdev_Calendar_Booking_Trait {
                         if (empty($time_reservations[$date])) {
                             unset($time_reservations[$date]);
                         }
-                        update_post_meta($calendar_id, '_abc_time_slots_reservations', wp_json_encode($time_reservations, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES));
+                        self::save_time_reservations($calendar_id, $time_reservations);
                     }
                 }
-                $status_map = self::apply_slot_aggregate_to_status_map($date, self::get_calendar_settings($calendar_id), $time_overrides, $time_reservations, $status_map);
-                self::save_status_map($calendar_id, $status_map);
+                $calendar_settings = self::get_calendar_settings($calendar_id);
+                $reconciled = self::reconcile_calendar_state($calendar_settings, $time_overrides, $time_reservations, $status_map);
+                self::save_time_reservations($calendar_id, $reconciled['time_reservations']);
+                self::save_status_map($calendar_id, $reconciled['status_map']);
             }
 
             $send = (string) get_post_meta($request_id, '_abc_send_expired_email', true) === '1';

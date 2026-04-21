@@ -359,16 +359,19 @@ trait Rdev_Calendar_Settings_Trait {
         );
 
         $time_reservations = self::normalize_time_slot_reservations((string) get_post_meta($post_id, '_abc_time_slots_reservations', true));
+
+        $status_map_raw = trim((string) wp_unslash($incoming['status_map'] ?? '{}'));
+        $status_map = self::normalize_status_map($status_map_raw);
+        $reconciled = self::reconcile_calendar_state($save, $time_overrides, $time_reservations, $status_map);
+        $time_reservations = $reconciled['time_reservations'];
+        $status_map = $reconciled['status_map'];
+        if (! empty($reconciled['changed'])) {
+            self::queue_reconcile_notice($post_id);
+        }
         $save['time_slots_reservations'] = wp_json_encode(
             $time_reservations,
             JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES
         );
-
-        $status_map_raw = trim((string) wp_unslash($incoming['status_map'] ?? '{}'));
-        $status_map = self::normalize_status_map($status_map_raw);
-        foreach (array_keys($time_reservations) as $reserved_date) {
-            $status_map = self::apply_slot_aggregate_to_status_map($reserved_date, $save, $time_overrides, $time_reservations, $status_map);
-        }
         $save['status_map'] = wp_json_encode($status_map, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
 
         foreach (self::key_map() as $field => $meta_key) {
@@ -673,6 +676,79 @@ trait Rdev_Calendar_Settings_Trait {
 
     private static function save_status_map(int $calendar_id, array $status_map): void {
         update_post_meta($calendar_id, '_abc_status_map', wp_json_encode($status_map, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES));
+    }
+
+    private static function save_time_reservations(int $calendar_id, array $time_reservations): void {
+        update_post_meta($calendar_id, '_abc_time_slots_reservations', wp_json_encode($time_reservations, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES));
+    }
+
+    private static function reconcile_calendar_state(
+        array $settings,
+        array $time_overrides,
+        array $time_reservations,
+        array $status_map
+    ): array {
+        $normalized_reservations = self::normalize_time_slot_reservations(
+            wp_json_encode($time_reservations, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES)
+        );
+        $normalized_status_map = self::normalize_status_map(
+            wp_json_encode($status_map, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES)
+        );
+
+        foreach (array_keys($normalized_reservations) as $reserved_date) {
+            $normalized_status_map = self::apply_slot_aggregate_to_status_map(
+                $reserved_date,
+                $settings,
+                $time_overrides,
+                $normalized_reservations,
+                $normalized_status_map
+            );
+        }
+
+        $changed = (
+            wp_json_encode($normalized_reservations, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES)
+            !== wp_json_encode($time_reservations, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES)
+        ) || (
+            wp_json_encode($normalized_status_map, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES)
+            !== wp_json_encode($status_map, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES)
+        );
+
+        return [
+            'time_reservations' => $normalized_reservations,
+            'status_map' => $normalized_status_map,
+            'changed' => $changed,
+        ];
+    }
+
+    private static function queue_reconcile_notice(int $calendar_id): void {
+        if (! is_admin()) {
+            return;
+        }
+        $user_id = get_current_user_id();
+        if ($user_id <= 0) {
+            return;
+        }
+        $key = 'abc_reconcile_notice_' . $user_id;
+        set_transient($key, [
+            'calendar_id' => $calendar_id,
+        ], 2 * MINUTE_IN_SECONDS);
+    }
+
+    private static function consume_reconcile_notice(): ?array {
+        if (! is_admin()) {
+            return null;
+        }
+        $user_id = get_current_user_id();
+        if ($user_id <= 0) {
+            return null;
+        }
+        $key = 'abc_reconcile_notice_' . $user_id;
+        $payload = get_transient($key);
+        if (! is_array($payload)) {
+            return null;
+        }
+        delete_transient($key);
+        return $payload;
     }
 
     private static function replace_tokens(string $template, array $tokens): string {
