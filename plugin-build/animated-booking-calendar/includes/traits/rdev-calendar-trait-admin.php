@@ -88,8 +88,10 @@ trait Rdev_Calendar_Admin_Trait {
         $base_file = self::plugin_base_file();
         $base = plugin_dir_url($base_file) . 'assets/';
         $admin_css_ver = self::asset_version('assets/css/admin.css');
+        $front_css_ver = self::asset_version('assets/css/frontend.css');
         $admin_js_ver = self::asset_version('assets/js/admin.js');
         wp_enqueue_style('abc-admin', $base . 'css/admin.css', [], $admin_css_ver);
+        wp_enqueue_style('abc-frontend-preview', $base . 'css/frontend.css', [], $front_css_ver);
         wp_enqueue_script('abc-admin', $base . 'js/admin.js', [], $admin_js_ver, true);
         $is_pl = self::is_polish_locale();
         wp_localize_script('abc-admin', 'abcAdminI18n', [
@@ -120,6 +122,7 @@ trait Rdev_Calendar_Admin_Trait {
             'mode_slots' => self::tr('Hours', 'Godziny'),
             'mode_all_day' => self::tr('Full day', 'Cały dzień'),
             'locked_dates_skipped' => self::tr('Some selected dates are locked by active reservations and were skipped ({count}).', 'Część zaznaczonych dat jest zablokowana aktywnymi rezerwacjami i została pominięta ({count}).'),
+            'reserved_slots_skipped' => self::tr('Some selected time slots are reserved (booked/hold) and were skipped ({count}). Release them in Booking Requests first.', 'Część wybranych godzin ma aktywną rezerwację (zajęte/hold) i została pominięta ({count}). Najpierw zwolnij je w Zapytaniach rezerwacji.'),
             'locked_date_click_info' => self::tr('This date is locked by an active reservation. To release it, go to Booking Requests and use "Release date".', 'Ta data jest zablokowana aktywną rezerwacją. Aby ją zwolnić, przejdź do Zapytania rezerwacji i użyj akcji „Zwolnij termin”.'),
         ]);
     }

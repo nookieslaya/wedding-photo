@@ -485,8 +485,10 @@
           skipped += 1;
           return;
         }
-        const current = Array.isArray(state.timeOverrides[date]) ? state.timeOverrides[date] : [];
-        state.timeOverrides[date] = [...new Set(current.concat([slot]))].sort();
+        const base = Array.isArray(state.timeOverrides[date]) ? state.timeOverrides[date] : getDefaultSlots();
+        state.timeOverrides[date] = [...new Set(base.concat([slot]))]
+          .filter((v) => /^(?:[01]\d|2[0-3]):[0-5]\d$/.test(String(v)))
+          .sort();
       });
       save();
       renderSummary();
@@ -499,12 +501,18 @@
       const slot = String(timeInput?.value || '').trim();
       if (!/^(?:[01]\d|2[0-3]):[0-5]\d$/.test(slot) || state.selectedDates.size === 0) return;
       let skipped = 0;
+      let reservedSkipped = 0;
       state.selectedDates.forEach((date) => {
         if (isDateLocked(date)) {
           skipped += 1;
           return;
         }
-        const current = Array.isArray(state.timeOverrides[date]) ? state.timeOverrides[date] : [];
+        const reserved = getReservedSlots(date);
+        if (reserved.has(slot)) {
+          reservedSkipped += 1;
+          return;
+        }
+        const current = Array.isArray(state.timeOverrides[date]) ? state.timeOverrides[date] : getDefaultSlots();
         const next = current.filter((v) => v !== slot);
         if (next.length > 0) state.timeOverrides[date] = next;
         else delete state.timeOverrides[date];
@@ -514,6 +522,9 @@
       if (skipped > 0) {
         window.alert(fmt(t('locked_dates_skipped', 'Some selected dates are locked by active reservations and were skipped ({count}).'), { count: skipped }));
       }
+      if (reservedSkipped > 0) {
+        window.alert(fmt(t('reserved_slots_skipped', 'Some selected time slots are reserved (booked/hold) and were skipped ({count}). Release them in Booking Requests first.'), { count: reservedSkipped }));
+      }
     });
 
     renderStatusButtons();
@@ -521,8 +532,129 @@
     renderMonth();
   };
 
+  const initStylePreview = () => {
+    const preview = document.querySelector('[data-abc-live-preview]');
+    if (!(preview instanceof HTMLElement)) return;
+    const advancedRows = [...document.querySelectorAll('.abc-style-advanced-row')];
+    const colorRows = [...document.querySelectorAll('.abc-style-color-row')];
+    const themePreset = document.getElementById('abc_theme_preset');
+    const customColorsToggle = document.getElementById('abc_custom_colors_enabled');
+    const resetThemeStylesButton = document.getElementById('abc_reset_theme_styles');
+
+    const setClassByPrefix = (prefix, value) => {
+      [...preview.classList].forEach((className) => {
+        if (className.startsWith(prefix)) preview.classList.remove(className);
+      });
+      if (value) preview.classList.add(`${prefix}${value}`);
+    };
+
+    const readValue = (id) => {
+      const field = document.getElementById(id);
+      if (!(field instanceof HTMLInputElement || field instanceof HTMLSelectElement || field instanceof HTMLTextAreaElement)) {
+        return '';
+      }
+      if (field instanceof HTMLInputElement && field.type === 'checkbox') {
+        return field.checked ? '1' : '0';
+      }
+      return String(field.value || '').trim();
+    };
+
+    const setAdvancedVisible = (enabled) => {
+      advancedRows.forEach((row) => {
+        if (!(row instanceof HTMLElement)) return;
+        row.style.display = enabled ? '' : 'none';
+      });
+    };
+    const setColorVisible = (enabled) => {
+      colorRows.forEach((row) => {
+        if (!(row instanceof HTMLElement)) return;
+        row.style.display = enabled ? '' : 'none';
+      });
+    };
+    const applyThemePaletteToColorInputs = () => {
+      if (!(themePreset instanceof HTMLSelectElement)) return;
+      const selected = themePreset.selectedOptions && themePreset.selectedOptions.length > 0
+        ? themePreset.selectedOptions[0]
+        : null;
+      if (!(selected instanceof HTMLOptionElement)) return;
+
+      const bg = String(selected.dataset.abcBgColor || '').trim();
+      const text = String(selected.dataset.abcTextColor || '').trim();
+      const accentFromTheme = String(selected.dataset.abcAccentColor || '').trim();
+      const accent = accentFromTheme;
+      const bgInput = document.getElementById('abc_custom_bg_color');
+      const textInput = document.getElementById('abc_custom_text_color');
+      const accentInput = document.getElementById('abc_custom_accent_color');
+
+      if (bgInput instanceof HTMLInputElement && bgInput.type === 'color' && /^#[0-9a-f]{6}$/i.test(bg)) {
+        bgInput.value = bg;
+      }
+      if (textInput instanceof HTMLInputElement && textInput.type === 'color' && /^#[0-9a-f]{6}$/i.test(text)) {
+        textInput.value = text;
+      }
+      if (accentInput instanceof HTMLInputElement && accentInput.type === 'color' && /^#[0-9a-f]{6}$/i.test(accent)) {
+        accentInput.value = accent;
+      }
+    };
+
+    const apply = () => {
+      const advancedEnabled = readValue('abc_advanced_styles_enabled') === '1';
+      const customColorsEnabled = advancedEnabled && readValue('abc_custom_colors_enabled') === '1';
+      if (!customColorsEnabled) {
+        applyThemePaletteToColorInputs();
+      }
+      setClassByPrefix('abc-theme-', readValue('abc_theme_preset') || 'dark');
+      setClassByPrefix('abc-bg-', readValue('abc_background_style') || 'gradient');
+      setClassByPrefix('abc-font-', readValue('abc_font_preset') || 'modern');
+      setClassByPrefix('abc-layout-', advancedEnabled ? (readValue('abc_layout_mode') || 'split') : '');
+      setClassByPrefix('abc-style-', advancedEnabled ? (readValue('abc_style_preset') || 'classic') : '');
+      setClassByPrefix('abc-density-', advancedEnabled ? (readValue('abc_density_mode') || 'comfortable') : '');
+      setClassByPrefix('abc-size-', advancedEnabled ? (readValue('abc_font_size_mode') || 'm') : '');
+      setClassByPrefix('abc-btnshape-', advancedEnabled ? (readValue('abc_button_shape') || 'rounded') : '');
+      setClassByPrefix('abc-button-border-', advancedEnabled ? (readValue('abc_button_border_mode') || 'normal') : '');
+      setClassByPrefix('abc-button-hover-', advancedEnabled ? (readValue('abc_button_hover_mode') || 'soft') : '');
+      setClassByPrefix('abc-daystyle-', advancedEnabled ? (readValue('abc_day_cell_style') || 'soft') : '');
+      setClassByPrefix('abc-motion-', advancedEnabled ? (readValue('abc_animation_level') || 'subtle') : '');
+
+      preview.classList.toggle('abc-minimal', advancedEnabled && readValue('abc_minimal_mode') === '1');
+      preview.classList.toggle('abc-sticky-panel', advancedEnabled && readValue('abc_sticky_booking_panel') === '1');
+
+      const bg = readValue('abc_custom_bg_color');
+      const text = readValue('abc_custom_text_color');
+      const accent = readValue('abc_custom_accent_color');
+      if (customColorsEnabled && bg) preview.style.setProperty('--abc-custom-bg', bg);
+      else preview.style.removeProperty('--abc-custom-bg');
+      if (customColorsEnabled && text) preview.style.setProperty('--abc-custom-text', text);
+      else preview.style.removeProperty('--abc-custom-text');
+      if (customColorsEnabled && accent) preview.style.setProperty('--abc-custom-accent', accent);
+      else preview.style.removeProperty('--abc-custom-accent');
+
+      setAdvancedVisible(advancedEnabled);
+      setColorVisible(customColorsEnabled);
+    };
+
+    document.querySelectorAll('[data-abc-style-control], [data-abc-style-advanced-toggle], #abc_theme_preset, #abc_background_style, #abc_font_preset')
+      .forEach((node) => {
+        node.addEventListener('change', apply);
+        node.addEventListener('input', apply);
+      });
+
+    if (resetThemeStylesButton instanceof HTMLElement) {
+      resetThemeStylesButton.addEventListener('click', () => {
+        applyThemePaletteToColorInputs();
+        if (customColorsToggle instanceof HTMLInputElement) {
+          customColorsToggle.checked = false;
+        }
+        apply();
+      });
+    }
+
+    apply();
+  };
+
   const boot = () => {
     document.querySelectorAll('.abc-admin-manager').forEach(init);
+    initStylePreview();
   };
 
   if (document.readyState === 'loading') {

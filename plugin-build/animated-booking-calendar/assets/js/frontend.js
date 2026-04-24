@@ -11,9 +11,8 @@
 
   const STATUS_LABEL = {
     available: t('status_available', 'Available'),
-    tentative: t('status_tentative', 'Tentative booking'),
-    booked: t('status_booked', 'Booked'),
-    none: t('status_none', 'No information'),
+    unavailable: t('status_unavailable', 'Unavailable'),
+    none: t('status_unavailable', 'Unavailable'),
   };
 
   const toDateKey = (date) => {
@@ -102,6 +101,12 @@
     const offsetRaw = Number(calendar.dataset.abcOffset || 0);
     const dayModeDefaultRaw = String(calendar.dataset.abcDayModeDefault || 'slots').trim();
     const dayModeDefault = ['slots', 'all_day', 'hybrid'].includes(dayModeDefaultRaw) ? dayModeDefaultRaw : 'slots';
+    const todayKey = String(calendar.dataset.abcTodayKey || '').trim();
+    const nowTime = String(calendar.dataset.abcNowTime || '').trim();
+    const leadHours = Math.max(0, Number(calendar.dataset.abcBookingLeadHours || 0) || 0);
+    const bufferMinutes = Math.max(0, Number(calendar.dataset.abcBookingBufferMinutes || 0) || 0);
+    const cutoffDate = String(calendar.dataset.abcBookingCutoffDate || '').trim();
+    const cutoffTime = String(calendar.dataset.abcBookingCutoffTime || '').trim();
 
     let statusMap = {};
     let dayModeMap = {};
@@ -148,6 +153,8 @@
     const dateDisplay = calendar.querySelector('[data-abc-date-display]');
     const timeSelect = calendar.querySelector('[data-abc-time-select]');
     const isAllDayInput = calendar.querySelector('[data-abc-is-all-day]');
+    const legend = calendar.closest('[data-abc-module]')?.querySelector('[data-abc-legend]');
+    const legendToggle = calendar.closest('[data-abc-module]')?.querySelector('[data-abc-legend-toggle]');
 
     if (!monthLabel || !weekdays || !daysGrid || !note || !prev || !next) return;
 
@@ -202,9 +209,38 @@
       if (dayModeDefault === 'all_day') return 'all_day';
       return 'slots';
     };
+    const publicStatus = (status) => (status === 'available' ? 'available' : 'unavailable');
+
+    const isPastDate = (dayKey) => /^\d{4}-\d{2}-\d{2}$/.test(dayKey) && todayKey !== '' && dayKey < todayKey;
+    const isPastSlot = (dayKey, slot) => (
+      /^\d{4}-\d{2}-\d{2}$/.test(dayKey)
+      && /^(?:[01]\d|2[0-3]):[0-5]\d$/.test(slot)
+      && todayKey !== ''
+      && nowTime !== ''
+      && dayKey === todayKey
+      && slot <= nowTime
+    );
+    const isCutoffBlockedAllDay = (dayKey) => (
+      /^\d{4}-\d{2}-\d{2}$/.test(dayKey)
+      && /^\d{4}-\d{2}-\d{2}$/.test(cutoffDate)
+      && dayKey <= cutoffDate
+    );
+    const isCutoffBlockedSlot = (dayKey, slot) => {
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(dayKey) || !/^(?:[01]\d|2[0-3]):[0-5]\d$/.test(slot)) return true;
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(cutoffDate) || !/^(?:[01]\d|2[0-3]):[0-5]\d$/.test(cutoffTime)) return false;
+      if (dayKey < cutoffDate) return true;
+      if (dayKey > cutoffDate) return false;
+      return slot <= cutoffTime;
+    };
 
     const getAvailableSlots = (dayKey) => {
+      if (isPastDate(dayKey)) {
+        return [];
+      }
       if (resolveDayMode(dayKey) === 'all_day') {
+        if (isCutoffBlockedAllDay(dayKey)) {
+          return [];
+        }
         const reserved = timeReservations[dayKey] || {};
         return Object.keys(reserved).length > 0 ? [] : ['ALL_DAY'];
       }
@@ -212,13 +248,19 @@
         ? timeOverrides[dayKey]
         : defaultSlots;
       const reserved = timeReservations[dayKey] || {};
-      return configured.filter((slot) => !reserved[slot]);
+      return configured.filter((slot) => !reserved[slot] && !isPastSlot(dayKey, slot) && !isCutoffBlockedSlot(dayKey, slot));
+    };
+    const isBookableDay = (dayKey, dayData) => {
+      if (!dayData || String(dayData.status || 'none') !== 'available') {
+        return false;
+      }
+      return getAvailableSlots(dayKey).length > 0;
     };
 
     const setBooking = (dayKey, dayData) => {
       if (!bookingPanel || !dateInput || !dateDisplay || !openButton || !form || !timeSelect) return;
       const daySlots = getAvailableSlots(dayKey);
-      if (!dayData || dayData.status !== 'available' || daySlots.length === 0) {
+      if (!dayData || dayData.status !== 'available' || daySlots.length === 0 || isPastDate(dayKey)) {
         hideBooking();
         return;
       }
@@ -278,7 +320,9 @@
         const date = new Date(y, m, d);
         const key = toDateKey(date);
         const entry = statusMap[key] || { status: 'none', note: '' };
-        cells.push(`<button type="button" class="abc-day is-${entry.status}" data-day="${key}" data-status="${entry.status}">${d}</button>`);
+        const displayStatus = publicStatus(String(entry.status || 'none'));
+        const pastClass = isPastDate(key) ? ' is-past' : '';
+        cells.push(`<button type="button" class="abc-day is-${displayStatus}${pastClass}" data-day="${key}" data-status="${displayStatus}">${d}</button>`);
       }
 
       while (cells.length < 42) {
@@ -287,8 +331,12 @@
       }
 
       daysGrid.innerHTML = cells.join('');
-      const first = daysGrid.querySelector('.abc-day[data-day]');
-      if (first) first.click();
+      const dayButtons = [...daysGrid.querySelectorAll('.abc-day[data-day]')];
+      const target = dayButtons.find((btn) => {
+        const day = String(btn.getAttribute('data-day') || '');
+        return isBookableDay(day, statusMap[day] || { status: 'none', note: '' });
+      }) || dayButtons[0];
+      if (target) target.click();
       else {
         note.textContent = t('no_data_month', 'No data for selected month.');
         hideBooking();
@@ -306,11 +354,12 @@
 
       const day = btn.dataset.day || '';
       const data = statusMap[day] || { status: 'none', note: '' };
+      const displayStatus = publicStatus(String(data.status || 'none'));
       const d = day ? new Date(day + 'T00:00:00') : null;
       const dateText = d ? dateFormatter.format(d) : '';
       const daySlots = day ? getAvailableSlots(day) : [];
       const dayMode = day ? resolveDayMode(day) : 'slots';
-      const showSlots = ['available', 'tentative', 'free', 'hold'].includes(String(data.status || ''));
+      const showSlots = displayStatus === 'available';
       const slotsText = showSlots
         ? (dayMode === 'all_day'
             ? ` · ${t('all_day', 'Full day')}`
@@ -318,8 +367,8 @@
         : '';
 
       note.textContent = data.note
-        ? `${dateText}: ${(STATUS_LABEL[data.status] || STATUS_LABEL.none)} · ${data.note}${slotsText}`
-        : `${dateText}: ${(STATUS_LABEL[data.status] || STATUS_LABEL.none)}${slotsText}`;
+        ? `${dateText}: ${(STATUS_LABEL[displayStatus] || STATUS_LABEL.none)} · ${data.note}${slotsText}`
+        : `${dateText}: ${(STATUS_LABEL[displayStatus] || STATUS_LABEL.none)}${slotsText}`;
 
       setBooking(day, data);
     });
@@ -337,6 +386,35 @@
         renderMonth();
       }
     });
+    legendToggle?.addEventListener('click', () => {
+      if (!legend) return;
+      const hidden = legend.hasAttribute('hidden');
+      if (hidden) {
+        legend.removeAttribute('hidden');
+        legendToggle.setAttribute('aria-expanded', 'true');
+        legendToggle.textContent = t('legend_hide', 'Hide legend');
+      } else {
+        legend.setAttribute('hidden', 'hidden');
+        legendToggle.setAttribute('aria-expanded', 'false');
+        legendToggle.textContent = t('legend_show', 'Show legend');
+      }
+    });
+
+    const firstBookableMonthIndex = months.findIndex((month) => {
+      const y = month.getFullYear();
+      const m = month.getMonth();
+      const daysInMonth = new Date(y, m + 1, 0).getDate();
+      for (let d = 1; d <= daysInMonth; d += 1) {
+        const key = toDateKey(new Date(y, m, d));
+        if (isBookableDay(key, statusMap[key] || { status: 'none', note: '' })) {
+          return true;
+        }
+      }
+      return false;
+    });
+    if (firstBookableMonthIndex >= 0) {
+      index = firstBookableMonthIndex;
+    }
 
     renderMonth();
   };

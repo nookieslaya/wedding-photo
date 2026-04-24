@@ -6,6 +6,142 @@ if (! defined('ABSPATH')) {
 
 if (! trait_exists('Rdev_Calendar_Booking_Trait')) {
 trait Rdev_Calendar_Booking_Trait {
+    private static function lead_time_hours(array $settings): int {
+        return max(0, min(8760, (int) ($settings['booking_lead_time_hours'] ?? 24)));
+    }
+
+    private static function time_buffer_minutes(array $settings): int {
+        return max(0, min(720, (int) ($settings['booking_time_buffer_minutes'] ?? 30)));
+    }
+
+    private static function history_retention_days(array $settings): int {
+        return max(0, min(3650, (int) ($settings['booking_history_retention_days'] ?? 90)));
+    }
+
+    private static function is_blocked_by_lead_time(array $settings, string $date, string $time_slot, bool $is_all_day): bool {
+        $lead_hours = self::lead_time_hours($settings);
+        $buffer_minutes = self::time_buffer_minutes($settings);
+        if ($lead_hours <= 0 && $buffer_minutes <= 0) {
+            return false;
+        }
+        if (! preg_match('/^\d{4}-\d{2}-\d{2}$/', $date)) {
+            return true;
+        }
+
+        $tz = wp_timezone();
+        $cutoff_ts = time() + ($lead_hours * HOUR_IN_SECONDS) + ($buffer_minutes * MINUTE_IN_SECONDS);
+        $selected_time = $is_all_day ? '00:00' : $time_slot;
+        if (! $is_all_day && ! preg_match('/^(?:[01]\d|2[0-3]):[0-5]\d$/', $selected_time)) {
+            return true;
+        }
+
+        try {
+            $selected = new \DateTimeImmutable($date . ' ' . $selected_time . ':00', $tz);
+            return $selected->getTimestamp() <= $cutoff_ts;
+        } catch (\Throwable $e) {
+            return true;
+        }
+    }
+
+    private static function cleanup_historical_calendar_data_once_per_day(): void {
+        $key = 'abc_history_cleanup_last_run';
+        $last = (int) get_transient($key);
+        $now = time();
+        if ($last > 0 && ($now - $last) < DAY_IN_SECONDS) {
+            return;
+        }
+        set_transient($key, $now, DAY_IN_SECONDS + HOUR_IN_SECONDS);
+
+        $calendar_ids = get_posts([
+            'post_type' => self::CALENDAR_CPT,
+            'post_status' => 'publish',
+            'posts_per_page' => -1,
+            'fields' => 'ids',
+        ]);
+        if (empty($calendar_ids)) {
+            return;
+        }
+
+        $tz = wp_timezone();
+        foreach ($calendar_ids as $calendar_id) {
+            $calendar_id = (int) $calendar_id;
+            if ($calendar_id <= 0) {
+                continue;
+            }
+            $settings = self::get_calendar_settings($calendar_id);
+            $retention_days = self::history_retention_days($settings);
+            if ($retention_days <= 0) {
+                continue;
+            }
+            $cutoff_date = wp_date('Y-m-d', time() - ($retention_days * DAY_IN_SECONDS), $tz);
+
+            $status_map = self::normalize_status_map((string) get_post_meta($calendar_id, '_abc_status_map', true));
+            $day_mode_map = self::normalize_day_mode_map((string) get_post_meta($calendar_id, '_abc_day_mode_map', true));
+            $time_overrides = self::normalize_time_slots_overrides((string) get_post_meta($calendar_id, '_abc_time_slots_overrides', true));
+            $time_reservations = self::normalize_time_slot_reservations((string) get_post_meta($calendar_id, '_abc_time_slots_reservations', true));
+
+            $filtered_status_map = [];
+            foreach ($status_map as $date_key => $entry) {
+                if (is_string($date_key) && $date_key >= $cutoff_date) {
+                    $filtered_status_map[$date_key] = $entry;
+                }
+            }
+            $filtered_day_mode_map = [];
+            foreach ($day_mode_map as $date_key => $mode) {
+                if (is_string($date_key) && $date_key >= $cutoff_date) {
+                    $filtered_day_mode_map[$date_key] = $mode;
+                }
+            }
+            $filtered_time_overrides = [];
+            foreach ($time_overrides as $date_key => $slots) {
+                if (is_string($date_key) && $date_key >= $cutoff_date) {
+                    $filtered_time_overrides[$date_key] = $slots;
+                }
+            }
+            $filtered_time_reservations = [];
+            foreach ($time_reservations as $date_key => $slots) {
+                if (is_string($date_key) && $date_key >= $cutoff_date) {
+                    $filtered_time_reservations[$date_key] = $slots;
+                }
+            }
+
+            $changed = (
+                wp_json_encode($filtered_status_map, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) !== wp_json_encode($status_map, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES)
+                || wp_json_encode($filtered_day_mode_map, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) !== wp_json_encode($day_mode_map, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES)
+                || wp_json_encode($filtered_time_overrides, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) !== wp_json_encode($time_overrides, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES)
+                || wp_json_encode($filtered_time_reservations, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) !== wp_json_encode($time_reservations, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES)
+            );
+            if (! $changed) {
+                continue;
+            }
+
+            $reconciled = self::reconcile_calendar_state($settings, $filtered_time_overrides, $filtered_time_reservations, $filtered_status_map);
+            update_post_meta($calendar_id, '_abc_status_map', wp_json_encode($reconciled['status_map'], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES));
+            update_post_meta($calendar_id, '_abc_day_mode_map', wp_json_encode($filtered_day_mode_map, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES));
+            update_post_meta($calendar_id, '_abc_time_slots_overrides', wp_json_encode($filtered_time_overrides, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES));
+            update_post_meta($calendar_id, '_abc_time_slots_reservations', wp_json_encode($reconciled['time_reservations'], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES));
+        }
+    }
+
+    private static function is_past_date_key(string $date): bool {
+        $tz = wp_timezone();
+        $today = wp_date('Y-m-d', null, $tz);
+        return $date < $today;
+    }
+
+    private static function is_past_time_slot_for_today(string $date, string $time_slot): bool {
+        if (! preg_match('/^\d{4}-\d{2}-\d{2}$/', $date) || ! preg_match('/^(?:[01]\d|2[0-3]):[0-5]\d$/', $time_slot)) {
+            return true;
+        }
+        $tz = wp_timezone();
+        $today = wp_date('Y-m-d', null, $tz);
+        if ($date !== $today) {
+            return false;
+        }
+        $now_hm = wp_date('H:i', null, $tz);
+        return $time_slot <= $now_hm;
+    }
+
     public static function handle_booking_submit(): void {
         $calendar_id = isset($_POST['abc_calendar_id']) ? absint($_POST['abc_calendar_id']) : 0;
         $redirect = wp_get_referer() ?: home_url('/');
@@ -57,6 +193,12 @@ trait Rdev_Calendar_Booking_Trait {
         if (! is_email($email)) {
             $go($calendar_id, 'error', self::tr('Provide a valid email address.', 'Podaj poprawny adres e-mail.'));
         }
+        if (self::is_past_date_key($date)) {
+            $go($calendar_id, 'error', self::tr('Selected date is in the past.', 'Wybrana data jest w przeszłości.'));
+        }
+        if (! $is_all_day && self::is_past_time_slot_for_today($date, $time_slot)) {
+            $go($calendar_id, 'error', self::tr('Selected time has already passed.', 'Wybrana godzina już minęła.'));
+        }
 
         $options = self::parse_options((string) $settings['booking_options']);
         if (! in_array($option, $options, true)) {
@@ -75,6 +217,12 @@ trait Rdev_Calendar_Booking_Trait {
             $time_slot = 'ALL_DAY';
         } elseif ($resolved_day_mode === 'slots' && $is_all_day) {
             $go($calendar_id, 'error', self::tr('This date accepts hourly booking only.', 'Ten termin przyjmuje wyłącznie rezerwacje godzinowe.'));
+        }
+        if (! $is_all_day && self::is_past_time_slot_for_today($date, $time_slot)) {
+            $go($calendar_id, 'error', self::tr('Selected time has already passed.', 'Wybrana godzina już minęła.'));
+        }
+        if (self::is_blocked_by_lead_time($settings, $date, $time_slot, $is_all_day)) {
+            $go($calendar_id, 'error', self::tr('Selected date/time is too close. Please choose a later slot.', 'Wybrana data/godzina jest zbyt blisko. Wybierz późniejszy termin.'));
         }
 
         $time_overrides = self::normalize_time_slots_overrides((string) get_post_meta($calendar_id, '_abc_time_slots_overrides', true));
@@ -247,6 +395,7 @@ trait Rdev_Calendar_Booking_Trait {
         }
         set_transient($key, $now, 15 * MINUTE_IN_SECONDS);
         self::cleanup_expired_holds(50);
+        self::cleanup_historical_calendar_data_once_per_day();
     }
 
     public static function cleanup_expired_holds(int $limit = 100): void {
@@ -264,10 +413,6 @@ trait Rdev_Calendar_Booking_Trait {
                 ['key' => '_abc_hold_expires_at', 'value' => $now, 'type' => 'NUMERIC', 'compare' => '<='],
             ],
         ]);
-
-        if (empty($requests)) {
-            return;
-        }
 
         foreach ($requests as $request_id) {
             $calendar_id = (int) get_post_meta($request_id, '_abc_calendar_id', true);
@@ -330,6 +475,8 @@ trait Rdev_Calendar_Booking_Trait {
 
             update_post_meta($request_id, '_abc_status', 'expired');
         }
+
+        self::cleanup_historical_calendar_data_once_per_day();
     }
 
 }

@@ -22,9 +22,12 @@ trait Rdev_Calendar_Frontend_Trait {
         wp_localize_script('abc-frontend', 'abcCalendarI18n', [
             'locale' => self::locale_tag(),
             'status_available' => self::tr('Available', 'Dostępny'),
+            'status_unavailable' => self::tr('Unavailable', 'Niedostępny'),
             'status_tentative' => self::tr('Tentative booking', 'Wstępna rezerwacja'),
             'status_booked' => self::tr('Booked', 'Zajęty'),
             'status_none' => self::tr('No information', 'Brak informacji'),
+            'legend_show' => self::tr('Show legend', 'Pokaż legendę'),
+            'legend_hide' => self::tr('Hide legend', 'Ukryj legendę'),
             'weekdays' => $is_pl ? ['Pon', 'Wt', 'Śr', 'Czw', 'Pt', 'Sob', 'Nd'] : ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
             'choose_hour' => self::tr('Choose time', 'Wybierz godzinę'),
             'no_data_month' => self::tr('No data for selected month.', 'Brak danych dla wybranego miesiąca.'),
@@ -54,6 +57,22 @@ trait Rdev_Calendar_Frontend_Trait {
         $time_overrides = self::normalize_time_slots_overrides((string) ($s['time_slots_overrides'] ?? '{}'));
         $time_reservations = self::normalize_time_slot_reservations((string) ($s['time_slots_reservations'] ?? '{}'));
         $default_time_slots = self::parse_time_slots((string) ($s['booking_default_time_slots'] ?? ''));
+        $today_key = wp_date('Y-m-d');
+        $status_map = array_filter($status_map, static function ($entry, $date_key) use ($today_key) {
+            return is_string($date_key) && $date_key >= $today_key;
+        }, ARRAY_FILTER_USE_BOTH);
+        $day_mode_map = array_filter($day_mode_map, static function ($mode, $date_key) use ($today_key) {
+            return is_string($date_key) && $date_key >= $today_key;
+        }, ARRAY_FILTER_USE_BOTH);
+        $time_overrides = array_filter($time_overrides, static function ($slots, $date_key) use ($today_key) {
+            return is_string($date_key) && $date_key >= $today_key;
+        }, ARRAY_FILTER_USE_BOTH);
+        $time_reservations = array_filter($time_reservations, static function ($slots, $date_key) use ($today_key) {
+            return is_string($date_key) && $date_key >= $today_key;
+        }, ARRAY_FILTER_USE_BOTH);
+        $lead_hours = max(0, min(8760, (int) ($s['booking_lead_time_hours'] ?? 24)));
+        $buffer_minutes = max(0, min(720, (int) ($s['booking_time_buffer_minutes'] ?? 30)));
+        $booking_cutoff_ts = time() + ($lead_hours * HOUR_IN_SECONDS) + ($buffer_minutes * MINUTE_IN_SECONDS);
 
         wp_enqueue_style('abc-frontend');
         wp_enqueue_script('abc-frontend');
@@ -80,10 +99,38 @@ trait Rdev_Calendar_Frontend_Trait {
         $theme_class = 'abc-theme-' . self::sanitize_choice((string) $s['theme_preset'], self::theme_presets(), 'dark');
         $bg_class = 'abc-bg-' . self::sanitize_choice((string) $s['background_style'], self::background_styles(), 'gradient');
         $font_class = 'abc-font-' . self::sanitize_choice((string) $s['font_preset'], self::font_presets(), 'modern');
+        $advanced_styles_enabled = self::to_bool($s['advanced_styles_enabled'] ?? 0);
+        $layout_class = $advanced_styles_enabled ? 'abc-layout-' . self::sanitize_choice((string) ($s['layout_mode'] ?? 'split'), self::layout_modes(), 'split') : '';
+        $style_preset_class = $advanced_styles_enabled ? 'abc-style-' . self::sanitize_choice((string) ($s['style_preset'] ?? 'classic'), self::style_presets(), 'classic') : '';
+        $density_class = $advanced_styles_enabled ? 'abc-density-' . self::sanitize_choice((string) ($s['density_mode'] ?? 'comfortable'), self::density_modes(), 'comfortable') : '';
+        $size_class = $advanced_styles_enabled ? 'abc-size-' . self::sanitize_choice((string) ($s['font_size_mode'] ?? 'm'), self::font_size_modes(), 'm') : '';
+        $button_shape_class = $advanced_styles_enabled ? 'abc-btnshape-' . self::sanitize_choice((string) ($s['button_shape'] ?? 'rounded'), self::button_shapes(), 'rounded') : '';
+        $button_border_class = $advanced_styles_enabled ? 'abc-button-border-' . self::sanitize_choice((string) ($s['button_border_mode'] ?? 'normal'), self::button_border_modes(), 'normal') : '';
+        $button_hover_class = $advanced_styles_enabled ? 'abc-button-hover-' . self::sanitize_choice((string) ($s['button_hover_mode'] ?? 'soft'), self::button_hover_modes(), 'soft') : '';
+        $day_cell_style_class = $advanced_styles_enabled ? 'abc-daystyle-' . self::sanitize_choice((string) ($s['day_cell_style'] ?? 'soft'), self::day_cell_styles(), 'soft') : '';
+        $animation_class = $advanced_styles_enabled ? 'abc-motion-' . self::sanitize_choice((string) ($s['animation_level'] ?? 'subtle'), self::animation_levels(), 'subtle') : '';
+        $minimal_class = $advanced_styles_enabled && self::to_bool($s['minimal_mode'] ?? 0) ? ' abc-minimal' : '';
+        $sticky_panel_class = $advanced_styles_enabled && self::to_bool($s['sticky_booking_panel'] ?? 1) ? ' abc-sticky-panel' : '';
+        $style_vars = self::build_style_vars($s);
 
         ob_start();
         ?>
-        <section class="abc-module <?php echo esc_attr($theme_class . ' ' . $bg_class . ' ' . $font_class); ?>" data-abc-module>
+        <section class="abc-module <?php echo esc_attr(
+            $theme_class . ' '
+            . $bg_class . ' '
+            . $font_class . ' '
+            . $layout_class . ' '
+            . $style_preset_class . ' '
+            . $density_class . ' '
+            . $size_class . ' '
+            . $button_shape_class . ' '
+            . $button_border_class . ' '
+            . $button_hover_class . ' '
+            . $day_cell_style_class . ' '
+            . $animation_class
+            . $minimal_class
+            . $sticky_panel_class
+        ); ?>" data-abc-module<?php echo $style_vars !== '' ? ' style="' . esc_attr($style_vars) . '"' : ''; ?>>
             <div class="abc-wrap">
                 <aside class="abc-side">
                     <?php if ($s['section_title'] !== '') : ?><p class="abc-section-title"><?php echo esc_html((string) $s['section_title']); ?></p><?php endif; ?>
@@ -93,10 +140,12 @@ trait Rdev_Calendar_Frontend_Trait {
                     <?php if ($s['cta_label'] !== '' && $s['cta_url'] !== '') : ?>
                         <a class="abc-cta" href="<?php echo esc_url((string) $s['cta_url']); ?>"><?php echo esc_html((string) $s['cta_label']); ?></a>
                     <?php endif; ?>
-                    <div class="abc-legend">
+                    <?php if (! self::to_bool($s['legend_toggle_hidden'] ?? 0)) : ?>
+                        <button type="button" class="abc-legend-toggle" data-abc-legend-toggle aria-expanded="true"><?php echo esc_html(self::tr('Hide legend', 'Ukryj legendę')); ?></button>
+                    <?php endif; ?>
+                    <div class="abc-legend" data-abc-legend>
                         <div><span class="dot available"></span><?php echo esc_html(self::tr('Available', 'Dostępny')); ?></div>
-                        <div><span class="dot tentative"></span><?php echo esc_html(self::tr('Tentative Booking', 'Wstępna Rezerwacja')); ?></div>
-                        <div><span class="dot booked"></span><?php echo esc_html(self::tr('Booked', 'Zajęty')); ?></div>
+                        <div><span class="dot unavailable"></span><?php echo esc_html(self::tr('Unavailable', 'Niedostępny')); ?></div>
                     </div>
                 </aside>
 
@@ -105,6 +154,12 @@ trait Rdev_Calendar_Frontend_Trait {
                     data-abc-calendar-id="<?php echo (int) $calendar_id; ?>"
                     data-abc-months="<?php echo (int) $s['months_to_show']; ?>"
                     data-abc-offset="<?php echo (int) $s['start_month_offset']; ?>"
+                    data-abc-today-key="<?php echo esc_attr($today_key); ?>"
+                    data-abc-now-time="<?php echo esc_attr(wp_date('H:i')); ?>"
+                    data-abc-booking-lead-hours="<?php echo (int) $lead_hours; ?>"
+                    data-abc-booking-buffer-minutes="<?php echo (int) $buffer_minutes; ?>"
+                    data-abc-booking-cutoff-date="<?php echo esc_attr(wp_date('Y-m-d', $booking_cutoff_ts)); ?>"
+                    data-abc-booking-cutoff-time="<?php echo esc_attr(wp_date('H:i', $booking_cutoff_ts)); ?>"
                     data-abc-status-map="<?php echo esc_attr(wp_json_encode($status_map)); ?>"
                     data-abc-day-mode-default="<?php echo esc_attr((string) ($s['day_mode_default'] ?? 'slots')); ?>"
                     data-abc-day-mode-map="<?php echo esc_attr(wp_json_encode($day_mode_map)); ?>"
@@ -162,7 +217,10 @@ trait Rdev_Calendar_Frontend_Trait {
                                 <label><?php echo esc_html(self::tr('Email', 'E-mail')); ?> *<input type="email" name="abc_email" required maxlength="190"></label>
                                 <label><?php echo esc_html(self::tr('Phone number', 'Numer telefonu')); ?> *<input type="text" name="abc_phone" required maxlength="50"></label>
                                 <label><?php echo esc_html(self::tr('Message', 'Wiadomość')); ?><textarea name="abc_message" rows="4" maxlength="1500"></textarea></label>
-                                <label class="abc-consent"><input type="checkbox" name="abc_consent" value="1" required> <?php echo wp_kses((string) $s['booking_consent_label'], ['a' => ['href' => true, 'target' => true, 'rel' => true], 'br' => []]); ?> *</label>
+                                <label class="abc-consent">
+                                    <input type="checkbox" name="abc_consent" value="1" required>
+                                    <span class="abc-consent-text"><?php echo wp_kses((string) $s['booking_consent_label'], ['a' => ['href' => true, 'target' => true, 'rel' => true], 'br' => []]); ?> *</span>
+                                </label>
                                 <button type="submit"><?php echo esc_html((string) $s['booking_form_submit_label']); ?></button>
                             </form>
                         <?php else : ?>

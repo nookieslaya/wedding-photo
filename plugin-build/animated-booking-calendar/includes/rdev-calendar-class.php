@@ -11,7 +11,7 @@ final class Rdev_Calendar_Plugin {
     use Rdev_Calendar_Frontend_Trait;
     use Rdev_Calendar_Booking_Trait;
 
-    private const VERSION = '2.2.0';
+    private const VERSION = '1.0.0';
     private const CALENDAR_CPT = 'abc_calendar';
     private const REQUEST_CPT = 'abc_booking_request';
 

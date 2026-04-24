@@ -3,7 +3,7 @@ Contributors: rdev
 Requires at least: 6.0
 Tested up to: 6.8
 Requires PHP: 7.1
-Stable tag: 2.2.0
+Stable tag: 1.0.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -115,50 +115,24 @@ Yes. Most form labels, notices, and email templates are editable in calendar set
 
 == Changelog ==
 
-= 2.2.0 =
+= 1.0.0 =
 
-* Added hybrid date/time availability:
-  * global default hours
+Initial public release.
+
+Highlights:
+
+* Booking workflow with temporary hold, approve/reject, release, and expiration cleanup.
+* Hybrid date/time availability model:
+  * default hours
   * per-date hour overrides
-* Added admin controls to add/remove hours for selected dates.
-* Added frontend hour selector that shows only available hours for selected date.
-* Added slot-level reservation handling (hold/booked) and server-side validation.
-
-= 2.1.0 =
-
-* Added hybrid time-slot booking model:
-  * default hours for all dates
-  * per-date hour overrides
-* Added admin tools to add/remove hours for selected dates.
-* Added frontend time selection based on selected date and real slot availability.
-* Added slot-level hold/booked reservations and validation on submit.
-* Added booking time column in booking requests list.
-
-= 2.0.5 =
-
-* Cleared hold notes after approve/reject so calendar displays only standard status text.
-* Added editable client email templates and toggles for approved and rejected decisions.
-
-= 2.0.4 =
-
-* Fixed trait method collision during plugin activation.
-* Updated shortcode names to match plugin branding.
-* Removed old shortcode aliases.
-
-= 2.0.2 =
-
-* Added safer modular loader with missing-file detection and admin notice.
-* Updated plugin author metadata.
-
-= 2.0.1 =
-
-* Improved PHP compatibility for broader hosting support.
-* Reduced risk of activation fatals on older environments.
-
-= 2.0.0 =
-
-* Refactored codebase into modular files.
-* Added safer load guards for class/trait conflicts.
-* Added frontend style presets (theme/background/font).
-* Added admin approval workflow (Approve / Reject).
-* Improved asset versioning with file modification timestamps.
+  * full-day mode and per-day mode overrides
+* Slot-level reservation consistency (hold/booked), including server-side conflict validation.
+* Frontend privacy model: public view shows only Available / Unavailable statuses.
+* Frontend booking constraints:
+  * past date/time blocking
+  * lead time (hours)
+  * time buffer (minutes)
+* Admin availability manager with time preview, date locks, and safer slot remove behavior.
+* Automatic historical data retention cleanup (configurable in days).
+* Configurable client email templates and toggles (initial/expired/approved/rejected).
+* Responsive, sectioned admin settings layout.

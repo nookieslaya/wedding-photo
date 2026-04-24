@@ -16,6 +16,7 @@
     "translate:mo": "wp i18n make-mo ./resources/lang ./resources/lang"
   },
   "devDependencies": {
+    "@playwright/test": "^1.59.1",
     "@roots/vite-plugin": "^2.0.0",
     "@tailwindcss/vite": "^4.0.0",
     "laravel-vite-plugin": "^3.0.0",

@@ -2,7 +2,7 @@
 /**
  * Plugin Name: rdev-calendar
  * Description: Professional booking calendar for WordPress with availability management, temporary holds, booking requests, and email notifications.
- * Version: 2.2.0
+ * Version: 1.0.0
  * Author: rdev.website
  * Text Domain: rdev-calendar
  * Requires PHP: 7.1
